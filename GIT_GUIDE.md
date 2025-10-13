@@ -2,7 +2,7 @@
 
 ## Repository Information
 - **Repository**: https://github.com/YASH514131/OnlyDev_Wallet.git
-- **Branch**: master
+- **Branch**: main
 
 ---
 
@@ -184,7 +184,7 @@ git show                   # Show latest commit details
 # Branch operations
 git branch                 # List branches
 git checkout -b new-branch # Create new branch
-git checkout master        # Switch to master
+git checkout main          # Switch to main
 git merge other-branch     # Merge branch
 ```
 
@@ -224,7 +224,7 @@ Usage:
 ✅ Repository initialized
 ✅ Remote added: https://github.com/YASH514131/OnlyDev_Wallet.git
 ✅ Initial commit pushed (38 files, 9096 insertions)
-✅ Branch 'master' tracking 'origin/master'
+✅ Branch 'main' tracking 'origin/main'
 
 ---
 
