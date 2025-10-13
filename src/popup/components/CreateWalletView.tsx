@@ -1,21 +1,27 @@
 import React, { useState } from 'react';
 
 interface CreateWalletViewProps {
-  onCreateWallet: () => void;
-  onImportWallet: (evmKey: string, solanaKey: string) => void;
+  onCreateWallet: (password: string) => void;
+  onImportWallet: (evmKey: string, solanaKey: string, password: string) => void;
+  onUnlockWallet: (password: string) => void;
   mnemonic?: string;
   onMnemonicConfirmed?: () => void;
+  hasExistingWallet?: boolean;
 }
 
 export const CreateWalletView: React.FC<CreateWalletViewProps> = ({ 
   onCreateWallet, 
   onImportWallet,
+  onUnlockWallet,
   mnemonic,
-  onMnemonicConfirmed
+  onMnemonicConfirmed,
+  hasExistingWallet
 }) => {
-  const [mode, setMode] = useState<'create' | 'import'>('create');
+  const [mode, setMode] = useState<'create' | 'import' | 'unlock'>('create');
   const [evmKey, setEvmKey] = useState('');
   const [solanaKey, setSolanaKey] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [copied, setCopied] = useState(false);
 
   const copyToClipboard = () => {
@@ -31,7 +37,39 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
       alert('Please enter both EVM and Solana keys');
       return;
     }
-    onImportWallet(evmKey.trim(), solanaKey.trim());
+    if (!password) {
+      alert('Please enter a password');
+      return;
+    }
+    if (password !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    onImportWallet(evmKey.trim(), solanaKey.trim(), password);
+  };
+
+  const handleCreate = () => {
+    if (!password) {
+      alert('Please enter a password');
+      return;
+    }
+    if (password !== confirmPassword) {
+      alert('Passwords do not match');
+      return;
+    }
+    if (password.length < 6) {
+      alert('Password must be at least 6 characters');
+      return;
+    }
+    onCreateWallet(password);
+  };
+
+  const handleUnlock = () => {
+    if (!password) {
+      alert('Please enter your password');
+      return;
+    }
+    onUnlockWallet(password);
   };
 
   // If mnemonic is provided, show the seed phrase screen
@@ -108,6 +146,18 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
 
         {/* Mode Toggle */}
         <div className="flex gap-2 mb-6">
+          {hasExistingWallet && (
+            <button
+              onClick={() => setMode('unlock')}
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
+                mode === 'unlock'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              Unlock
+            </button>
+          )}
           <button
             onClick={() => setMode('create')}
             className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all ${
@@ -130,7 +180,41 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
           </button>
         </div>
 
-        {mode === 'create' ? (
+        {mode === 'unlock' ? (
+          <div>
+            <div className="bg-slate-900 rounded-xl p-6 mb-6">
+              <h3 className="text-lg font-semibold text-slate-100 mb-3">
+                Welcome Back!
+              </h3>
+              <p className="text-sm text-slate-400">
+                Enter your password to unlock your wallet
+              </p>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onKeyPress={(e) => e.key === 'Enter' && handleUnlock()}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleUnlock}
+              className="w-full py-4 px-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
+            >
+              🔓 Unlock Wallet
+            </button>
+          </div>
+        ) : mode === 'create' ? (
           <div>
             <div className="bg-slate-900 rounded-xl p-6 mb-6">
               <h3 className="text-lg font-semibold text-slate-100 mb-3">
@@ -143,7 +227,7 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400 mt-1">✓</span>
-                  <span>Stored in memory (ephemeral)</span>
+                  <span>Encrypted and stored securely</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400 mt-1">✓</span>
@@ -152,8 +236,36 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
               </ul>
             </div>
 
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Password (min 6 characters)
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onKeyPress={(e) => e.key === 'Enter' && handleCreate()}
+                />
+              </div>
+            </div>
+
             <button
-              onClick={onCreateWallet}
+              onClick={handleCreate}
               className="w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl"
             >
               Create Wallet
@@ -185,6 +297,32 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
                   placeholder="Base64 encoded secret key"
                   className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   rows={3}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Password (min 6 characters)
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm password"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>

@@ -20,6 +20,7 @@ const Popup: React.FC = () => {
   const [wallet, setWallet] = useState<WalletState | null>(null);
   const [loading, setLoading] = useState(true);
   const [showMnemonic, setShowMnemonic] = useState<string | null>(null);
+  const [hasExistingWallet, setHasExistingWallet] = useState(false);
 
   useEffect(() => {
     initializeWallet();
@@ -47,6 +48,8 @@ const Popup: React.FC = () => {
       
       // Check if encrypted wallet exists
       const hasEncrypted = await hasEncryptedData();
+      setHasExistingWallet(hasEncrypted);
+      
       if (hasEncrypted) {
         // User needs to unlock wallet - show create view with unlock option
         setView('create');
@@ -75,7 +78,7 @@ const Popup: React.FC = () => {
     return wallet.publicKey;
   };
 
-  const handleCreateWallet = () => {
+  const handleCreateWallet = async (password: string) => {
     try {
       const evmWallet = createEvmWallet();
       const solanaWallet = createSolanaWallet();
@@ -89,13 +92,19 @@ const Popup: React.FC = () => {
         selectedNetwork: 'sepolia',
       };
       
-      // Store in memory (session)
-      storeInMemory({
+      const walletData = {
         evmPrivateKey: evmWallet.privateKey,
         evmMnemonic: evmWallet.mnemonic,
         solanaSecretKey: JSON.stringify(Array.from(solanaWallet.secretKey)),
         selectedNetwork: 'sepolia',
-      });
+      };
+      
+      // Store encrypted
+      const { storeEncrypted } = await import('../utils/storage');
+      await storeEncrypted(walletData, password);
+      
+      // Also store in memory (session)
+      storeInMemory(walletData);
       
       setWallet(newWallet);
       
@@ -116,7 +125,40 @@ const Popup: React.FC = () => {
     setView('wallet');
   };
 
-  const handleImportWallet = (evmKey: string, solanaKey: string) => {
+  const handleUnlockWallet = async (password: string) => {
+    try {
+      const { getEncrypted } = await import('../utils/storage');
+      const walletData = await getEncrypted(password);
+      
+      if (!walletData) {
+        alert('Failed to decrypt wallet. Incorrect password.');
+        return;
+      }
+      
+      const evmAddress = await getAddressFromKey(walletData.evmPrivateKey!);
+      const solanaPublicKey = await getSolanaAddress(walletData.solanaSecretKey!);
+      
+      const unlockedWallet: WalletState = {
+        evmAddress,
+        evmPrivateKey: walletData.evmPrivateKey!,
+        evmMnemonic: walletData.evmMnemonic,
+        solanaPublicKey,
+        solanaSecretKey: new Uint8Array(JSON.parse(walletData.solanaSecretKey!)),
+        selectedNetwork: walletData.selectedNetwork || 'sepolia',
+      };
+      
+      // Store in memory for current session
+      storeInMemory(walletData);
+      
+      setWallet(unlockedWallet);
+      setView('wallet');
+    } catch (error) {
+      console.error('Failed to unlock wallet:', error);
+      alert('Failed to unlock wallet. Incorrect password.');
+    }
+  };
+
+  const handleImportWallet = async (evmKey: string, solanaKey: string, password: string) => {
     try {
       const { importFromPrivateKey, importFromMnemonic } = require('../utils/evm');
       const { importFromSecretKey } = require('../utils/solana');
@@ -140,13 +182,19 @@ const Popup: React.FC = () => {
         selectedNetwork: 'sepolia',
       };
       
-      // Store in memory
-      storeInMemory({
+      const walletData = {
         evmPrivateKey: evmWallet.privateKey,
         evmMnemonic: evmWallet.mnemonic,
         solanaSecretKey: JSON.stringify(Array.from(solanaWallet.secretKey)),
         selectedNetwork: 'sepolia',
-      });
+      };
+      
+      // Store encrypted
+      const { storeEncrypted } = await import('../utils/storage');
+      await storeEncrypted(walletData, password);
+      
+      // Store in memory
+      storeInMemory(walletData);
       
       setWallet(newWallet);
       setView('wallet');
@@ -176,8 +224,10 @@ const Popup: React.FC = () => {
         <CreateWalletView 
           onCreateWallet={handleCreateWallet}
           onImportWallet={handleImportWallet}
+          onUnlockWallet={handleUnlockWallet}
           mnemonic={showMnemonic || undefined}
           onMnemonicConfirmed={handleMnemonicConfirmed}
+          hasExistingWallet={hasExistingWallet}
         />
       )}
       
