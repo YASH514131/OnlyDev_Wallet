@@ -13,16 +13,22 @@ const SESSION_KEY = 'testnet_wallet_session';
 const SESSION_TIMEOUT_KEY = 'testnet_wallet_session_timeout';
 const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 
+interface SessionData {
+  data: WalletData;
+  timestamp: number;
+}
+
 /**
- * Store wallet data in memory (session) with timeout
+ * Store wallet data in memory (session) with timeout using chrome.storage
  */
-export function storeInMemory(data: WalletData): void {
+export async function storeInMemory(data: WalletData): Promise<void> {
   try {
-    const sessionData = {
+    const sessionData: SessionData = {
       data,
       timestamp: Date.now(),
     };
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+    await chrome.storage.local.set({ [SESSION_KEY]: sessionData });
+    console.log('Session stored with timestamp:', sessionData.timestamp);
   } catch (error) {
     console.error('Failed to store in memory:', error);
   }
@@ -31,22 +37,28 @@ export function storeInMemory(data: WalletData): void {
 /**
  * Get wallet data from memory (session) if not expired
  */
-export function getFromMemory(): WalletData | null {
+export async function getFromMemory(): Promise<WalletData | null> {
   try {
-    const sessionItem = sessionStorage.getItem(SESSION_KEY);
-    if (!sessionItem) return null;
+    const result = await chrome.storage.local.get(SESSION_KEY);
+    const sessionData = result[SESSION_KEY] as SessionData | undefined;
     
-    const { data, timestamp } = JSON.parse(sessionItem);
-    const now = Date.now();
-    
-    // Check if session has expired (15 minutes)
-    if (now - timestamp > SESSION_DURATION) {
-      console.log('Session expired, clearing memory');
-      clearMemory();
+    if (!sessionData) {
+      console.log('No session data found');
       return null;
     }
     
-    return data;
+    const now = Date.now();
+    const elapsed = now - sessionData.timestamp;
+    
+    // Check if session has expired (15 minutes)
+    if (elapsed > SESSION_DURATION) {
+      console.log('Session expired, clearing memory. Elapsed:', elapsed, 'ms');
+      await clearMemory();
+      return null;
+    }
+    
+    console.log('Session valid. Time remaining:', Math.floor((SESSION_DURATION - elapsed) / 1000), 'seconds');
+    return sessionData.data;
   } catch (error) {
     console.error('Failed to get from memory:', error);
     return null;
@@ -56,15 +68,17 @@ export function getFromMemory(): WalletData | null {
 /**
  * Check if session is still valid
  */
-export function isSessionValid(): boolean {
+export async function isSessionValid(): Promise<boolean> {
   try {
-    const sessionItem = sessionStorage.getItem(SESSION_KEY);
-    if (!sessionItem) return false;
+    const result = await chrome.storage.local.get(SESSION_KEY);
+    const sessionData = result[SESSION_KEY] as SessionData | undefined;
     
-    const { timestamp } = JSON.parse(sessionItem);
+    if (!sessionData) return false;
+    
     const now = Date.now();
+    const elapsed = now - sessionData.timestamp;
     
-    return (now - timestamp) <= SESSION_DURATION;
+    return elapsed <= SESSION_DURATION;
   } catch (error) {
     return false;
   }
@@ -73,14 +87,15 @@ export function isSessionValid(): boolean {
 /**
  * Get remaining session time in seconds
  */
-export function getRemainingSessionTime(): number {
+export async function getRemainingSessionTime(): Promise<number> {
   try {
-    const sessionItem = sessionStorage.getItem(SESSION_KEY);
-    if (!sessionItem) return 0;
+    const result = await chrome.storage.local.get(SESSION_KEY);
+    const sessionData = result[SESSION_KEY] as SessionData | undefined;
     
-    const { timestamp } = JSON.parse(sessionItem);
+    if (!sessionData) return 0;
+    
     const now = Date.now();
-    const elapsed = now - timestamp;
+    const elapsed = now - sessionData.timestamp;
     const remaining = SESSION_DURATION - elapsed;
     
     return remaining > 0 ? Math.floor(remaining / 1000) : 0;
@@ -92,10 +107,10 @@ export function getRemainingSessionTime(): number {
 /**
  * Clear wallet data from memory
  */
-export function clearMemory(): void {
+export async function clearMemory(): Promise<void> {
   try {
-    sessionStorage.removeItem(SESSION_KEY);
-    sessionStorage.removeItem(SESSION_TIMEOUT_KEY);
+    await chrome.storage.local.remove([SESSION_KEY, SESSION_TIMEOUT_KEY]);
+    console.log('Session cleared');
   } catch (error) {
     console.error('Failed to clear memory:', error);
   }
@@ -104,13 +119,15 @@ export function clearMemory(): void {
 /**
  * Refresh session timeout (extend by another 15 minutes)
  */
-export function refreshSession(): void {
+export async function refreshSession(): Promise<void> {
   try {
-    const sessionItem = sessionStorage.getItem(SESSION_KEY);
-    if (!sessionItem) return;
+    const result = await chrome.storage.local.get(SESSION_KEY);
+    const sessionData = result[SESSION_KEY] as SessionData | undefined;
     
-    const { data } = JSON.parse(sessionItem);
-    storeInMemory(data); // This will update the timestamp
+    if (!sessionData) return;
+    
+    await storeInMemory(sessionData.data); // This will update the timestamp
+    console.log('Session refreshed');
   } catch (error) {
     console.error('Failed to refresh session:', error);
   }

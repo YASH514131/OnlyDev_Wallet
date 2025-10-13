@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Header, WalletView, SettingsView, CreateWalletView } from './components';
-import { getFromMemory, storeInMemory, hasEncryptedData, refreshSession, getRemainingSessionTime } from '../utils/storage';
+import { getFromMemory, storeInMemory, hasEncryptedData, refreshSession, getRemainingSessionTime, clearMemory } from '../utils/storage';
 import { createEvmWallet } from '../utils/evm';
 import { createSolanaWallet } from '../utils/solana';
 
@@ -29,9 +29,10 @@ const Popup: React.FC = () => {
   // Refresh session on any interaction
   useEffect(() => {
     if (wallet) {
-      const handleInteraction = () => {
-        refreshSession();
-        console.log('Session refreshed. Time remaining:', getRemainingSessionTime(), 'seconds');
+      const handleInteraction = async () => {
+        await refreshSession();
+        const remaining = await getRemainingSessionTime();
+        console.log('Session refreshed. Time remaining:', remaining, 'seconds');
       };
 
       // Refresh on mouse move, click, or keypress
@@ -40,8 +41,8 @@ const Popup: React.FC = () => {
       window.addEventListener('keypress', handleInteraction);
 
       // Check session expiry every minute
-      const interval = setInterval(() => {
-        const remaining = getRemainingSessionTime();
+      const interval = setInterval(async () => {
+        const remaining = await getRemainingSessionTime();
         console.log('Session check. Time remaining:', remaining, 'seconds');
         
         if (remaining <= 0) {
@@ -49,6 +50,7 @@ const Popup: React.FC = () => {
           console.log('Session expired! Locking wallet...');
           setWallet(null);
           setView('create');
+          await clearMemory();
         }
       }, 60000); // Check every minute
 
@@ -65,9 +67,10 @@ const Popup: React.FC = () => {
     try {
       setLoading(true);
       
-      // Check if wallet exists in memory
-      const memoryData = getFromMemory();
+      // Check if wallet exists in memory (session)
+      const memoryData = await getFromMemory();
       if (memoryData && memoryData.evmPrivateKey) {
+        console.log('Session found! Restoring wallet...');
         setWallet({
           evmAddress: memoryData.evmPrivateKey ? await getAddressFromKey(memoryData.evmPrivateKey) : '',
           evmPrivateKey: memoryData.evmPrivateKey,
@@ -80,6 +83,8 @@ const Popup: React.FC = () => {
         setLoading(false);
         return;
       }
+      
+      console.log('No active session found');
       
       // Check if encrypted wallet exists
       const hasEncrypted = await hasEncryptedData();
