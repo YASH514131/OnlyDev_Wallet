@@ -10,28 +10,82 @@ export interface WalletData {
 
 const STORAGE_KEY = 'testnet_wallet_data';
 const SESSION_KEY = 'testnet_wallet_session';
+const SESSION_TIMEOUT_KEY = 'testnet_wallet_session_timeout';
+const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
 
 /**
- * Store wallet data in memory (session)
+ * Store wallet data in memory (session) with timeout
  */
 export function storeInMemory(data: WalletData): void {
   try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+    const sessionData = {
+      data,
+      timestamp: Date.now(),
+    };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
   } catch (error) {
     console.error('Failed to store in memory:', error);
   }
 }
 
 /**
- * Get wallet data from memory (session)
+ * Get wallet data from memory (session) if not expired
  */
 export function getFromMemory(): WalletData | null {
   try {
-    const data = sessionStorage.getItem(SESSION_KEY);
-    return data ? JSON.parse(data) : null;
+    const sessionItem = sessionStorage.getItem(SESSION_KEY);
+    if (!sessionItem) return null;
+    
+    const { data, timestamp } = JSON.parse(sessionItem);
+    const now = Date.now();
+    
+    // Check if session has expired (15 minutes)
+    if (now - timestamp > SESSION_DURATION) {
+      console.log('Session expired, clearing memory');
+      clearMemory();
+      return null;
+    }
+    
+    return data;
   } catch (error) {
     console.error('Failed to get from memory:', error);
     return null;
+  }
+}
+
+/**
+ * Check if session is still valid
+ */
+export function isSessionValid(): boolean {
+  try {
+    const sessionItem = sessionStorage.getItem(SESSION_KEY);
+    if (!sessionItem) return false;
+    
+    const { timestamp } = JSON.parse(sessionItem);
+    const now = Date.now();
+    
+    return (now - timestamp) <= SESSION_DURATION;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Get remaining session time in seconds
+ */
+export function getRemainingSessionTime(): number {
+  try {
+    const sessionItem = sessionStorage.getItem(SESSION_KEY);
+    if (!sessionItem) return 0;
+    
+    const { timestamp } = JSON.parse(sessionItem);
+    const now = Date.now();
+    const elapsed = now - timestamp;
+    const remaining = SESSION_DURATION - elapsed;
+    
+    return remaining > 0 ? Math.floor(remaining / 1000) : 0;
+  } catch (error) {
+    return 0;
   }
 }
 
@@ -41,8 +95,24 @@ export function getFromMemory(): WalletData | null {
 export function clearMemory(): void {
   try {
     sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem(SESSION_TIMEOUT_KEY);
   } catch (error) {
     console.error('Failed to clear memory:', error);
+  }
+}
+
+/**
+ * Refresh session timeout (extend by another 15 minutes)
+ */
+export function refreshSession(): void {
+  try {
+    const sessionItem = sessionStorage.getItem(SESSION_KEY);
+    if (!sessionItem) return;
+    
+    const { data } = JSON.parse(sessionItem);
+    storeInMemory(data); // This will update the timestamp
+  } catch (error) {
+    console.error('Failed to refresh session:', error);
   }
 }
 

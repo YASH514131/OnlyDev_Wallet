@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Header, WalletView, SettingsView, CreateWalletView } from './components';
-import { getFromMemory, storeInMemory, hasEncryptedData } from '../utils/storage';
+import { getFromMemory, storeInMemory, hasEncryptedData, refreshSession, getRemainingSessionTime } from '../utils/storage';
 import { createEvmWallet } from '../utils/evm';
 import { createSolanaWallet } from '../utils/solana';
 
@@ -25,6 +25,41 @@ const Popup: React.FC = () => {
   useEffect(() => {
     initializeWallet();
   }, []);
+
+  // Refresh session on any interaction
+  useEffect(() => {
+    if (wallet) {
+      const handleInteraction = () => {
+        refreshSession();
+        console.log('Session refreshed. Time remaining:', getRemainingSessionTime(), 'seconds');
+      };
+
+      // Refresh on mouse move, click, or keypress
+      window.addEventListener('mousemove', handleInteraction);
+      window.addEventListener('click', handleInteraction);
+      window.addEventListener('keypress', handleInteraction);
+
+      // Check session expiry every minute
+      const interval = setInterval(() => {
+        const remaining = getRemainingSessionTime();
+        console.log('Session check. Time remaining:', remaining, 'seconds');
+        
+        if (remaining <= 0) {
+          // Session expired, lock wallet
+          console.log('Session expired! Locking wallet...');
+          setWallet(null);
+          setView('create');
+        }
+      }, 60000); // Check every minute
+
+      return () => {
+        window.removeEventListener('mousemove', handleInteraction);
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('keypress', handleInteraction);
+        clearInterval(interval);
+      };
+    }
+  }, [wallet]);
 
   const initializeWallet = async () => {
     try {
