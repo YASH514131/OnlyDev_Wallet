@@ -15,7 +15,7 @@ export const NETWORKS: Record<string, NetworkConfig> = {
     name: 'Ethereum Sepolia',
     type: 'EVM',
     chainId: 11155111,
-    rpcUrl: 'https://sepolia.infura.io/v3/YOUR_KEY',
+    rpcUrl: 'https://rpc.sepolia.org',
     explorerUrl: 'https://sepolia.etherscan.io',
     faucetUrl: 'https://sepoliafaucet.com',
     symbol: 'ETH',

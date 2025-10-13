@@ -19,6 +19,7 @@ const Popup: React.FC = () => {
   const [view, setView] = useState<View>('create');
   const [wallet, setWallet] = useState<WalletState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showMnemonic, setShowMnemonic] = useState<string | null>(null);
 
   useEffect(() => {
     initializeWallet();
@@ -97,11 +98,22 @@ const Popup: React.FC = () => {
       });
       
       setWallet(newWallet);
-      setView('wallet');
+      
+      // Show mnemonic first if available
+      if (evmWallet.mnemonic) {
+        setShowMnemonic(evmWallet.mnemonic);
+      } else {
+        setView('wallet');
+      }
     } catch (error) {
       console.error('Failed to create wallet:', error);
       alert('Failed to create wallet. Please try again.');
     }
+  };
+
+  const handleMnemonicConfirmed = () => {
+    setShowMnemonic(null);
+    setView('wallet');
   };
 
   const handleImportWallet = (evmKey: string, solanaKey: string) => {
@@ -164,6 +176,8 @@ const Popup: React.FC = () => {
         <CreateWalletView 
           onCreateWallet={handleCreateWallet}
           onImportWallet={handleImportWallet}
+          mnemonic={showMnemonic || undefined}
+          onMnemonicConfirmed={handleMnemonicConfirmed}
         />
       )}
       
