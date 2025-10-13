@@ -24,8 +24,12 @@ export function importFromSecretKey(secretKey: string | Uint8Array): SolanaWalle
     let secretKeyBytes: Uint8Array;
     
     if (typeof secretKey === 'string') {
-      // Assume base58 encoded
-      secretKeyBytes = Uint8Array.from(Buffer.from(secretKey, 'base64'));
+      // Decode base64 string to Uint8Array
+      const binaryString = atob(secretKey);
+      secretKeyBytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        secretKeyBytes[i] = binaryString.charCodeAt(i);
+      }
     } else {
       secretKeyBytes = secretKey;
     }
@@ -145,8 +149,13 @@ export async function requestAirdrop(publicKey: string, rpcUrl: string, amount =
 }
 
 /**
- * Export secret key as base58
+ * Export secret key as base64 (browser-compatible)
  */
 export function exportSecretKey(secretKey: Uint8Array): string {
-  return Buffer.from(secretKey).toString('base64');
+  // Convert Uint8Array to base64 using browser APIs
+  let binary = '';
+  for (let i = 0; i < secretKey.length; i++) {
+    binary += String.fromCharCode(secretKey[i]);
+  }
+  return btoa(binary);
 }

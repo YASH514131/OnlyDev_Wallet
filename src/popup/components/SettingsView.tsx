@@ -13,11 +13,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
   const [encryptPassword, setEncryptPassword] = useState('');
   const [showEncrypt, setShowEncrypt] = useState(false);
 
+  console.log('SettingsView rendered', { wallet, showKeys });
+
   const handleExportKeys = () => {
+    console.log('handleExportKeys clicked', showKeys);
     if (!showKeys) {
       const confirmed = confirm(
         '⚠️ WARNING: Only export testnet keys!\n\nNever share these keys or use them on mainnet.\n\nDo you want to continue?'
       );
+      console.log('User confirmed:', confirmed);
       if (!confirmed) return;
       setShowKeys(true);
     } else {
@@ -63,6 +67,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
     navigator.clipboard.writeText(text);
     alert(`${label} copied to clipboard!`);
   };
+
+  if (!wallet) {
+    return <div className="p-6 text-slate-100">Loading wallet...</div>;
+  }
 
   return (
     <div className="p-6 max-w-2xl mx-auto">
@@ -123,7 +131,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
         </button>
 
         {showKeys && (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-4">
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold text-slate-300">EVM Private Key</p>
