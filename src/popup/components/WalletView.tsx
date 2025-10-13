@@ -11,32 +11,67 @@ interface WalletViewProps {
 }
 
 export const WalletView: React.FC<WalletViewProps> = ({ wallet, onNetworkChange }) => {
-  const [balance, setBalance] = useState('0');
+  const [balance, setBalance] = useState<string>('0');
   const [loading, setLoading] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const currentNetwork = NETWORKS[wallet.selectedNetwork];
   const isEvm = currentNetwork?.type === 'EVM';
   const currentAddress = isEvm ? wallet.evmAddress : wallet.solanaPublicKey;
 
   useEffect(() => {
+    console.log('=== WALLET VIEW EFFECT ===');
+    console.log('Selected network:', wallet.selectedNetwork);
+    console.log('Network config:', currentNetwork);
+    console.log('Network type:', currentNetwork?.type);
+    console.log('Is EVM:', isEvm);
+    console.log('Current address:', currentAddress);
+    console.log('========================');
+    
+    setBalance('0'); // Reset balance
+    setError(null); // Reset error
     fetchBalance();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wallet.selectedNetwork, currentAddress]);
 
   const fetchBalance = async () => {
-    if (!currentNetwork) return;
+    if (!currentNetwork) {
+      console.warn('No network selected');
+      setError('No network selected');
+      return;
+    }
+    
+    console.log('=== FETCHING BALANCE ===');
+    console.log('Network:', currentNetwork.name);
+    console.log('Type:', currentNetwork.type);
+    console.log('RPC URL:', currentNetwork.rpcUrl);
     
     setLoading(true);
+    setError(null);
+    
     try {
       if (isEvm) {
+        console.log('>>> Fetching EVM balance for:', wallet.evmAddress);
         const bal = await getEvmBalance(wallet.evmAddress, currentNetwork.rpcUrl);
-        setBalance(bal);
+        console.log('>>> EVM Balance result:', bal);
+        setBalance(bal || '0');
       } else {
+        console.log('>>> Fetching Solana balance for:', wallet.solanaPublicKey);
         const bal = await getSolanaBalance(wallet.solanaPublicKey, currentNetwork.rpcUrl);
-        setBalance(bal);
+        console.log('>>> Solana Balance result:', bal);
+        console.log('>>> Balance type:', typeof bal);
+        console.log('>>> Setting balance state to:', bal);
+        setBalance(bal || '0');
+        
+        // Force a small delay to ensure state update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        console.log('>>> Balance state after update should be:', bal);
       }
-    } catch (error) {
-      console.error('Failed to fetch balance:', error);
+      console.log('=== BALANCE FETCH COMPLETE ===');
+    } catch (error: any) {
+      console.error('!!! Failed to fetch balance:', error);
+      setError(error.message || 'Failed to fetch balance');
       setBalance('0');
     } finally {
       setLoading(false);
@@ -102,16 +137,24 @@ export const WalletView: React.FC<WalletViewProps> = ({ wallet, onNetworkChange 
           <p className="text-slate-400 text-sm mb-2">Total Balance</p>
           <div className="flex items-center justify-center gap-2">
             <p className="text-4xl font-bold text-slate-100">
-              {loading ? '...' : parseFloat(balance).toFixed(4)}
+              {loading ? '...' : (balance && !isNaN(parseFloat(balance)) ? parseFloat(balance).toFixed(4) : '0.0000')}
             </p>
             <span className="text-2xl text-slate-400">{currentNetwork?.symbol}</span>
           </div>
+          <p className="text-xs text-slate-500 mt-1">
+            {currentNetwork?.name}
+          </p>
+          {error && (
+            <p className="text-xs text-red-400 mt-2">
+              ⚠️ {error}
+            </p>
+          )}
           <button
             onClick={fetchBalance}
             className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
             disabled={loading}
           >
-            {loading ? 'Refreshing...' : '↻ Refresh'}
+            {loading ? 'Refreshing...' : '↻ Refresh Balance'}
           </button>
         </div>
       </div>

@@ -1,5 +1,4 @@
 import { Keypair, Connection, Transaction, PublicKey, LAMPORTS_PER_SOL, SystemProgram } from '@solana/web3.js';
-import { isMainnetBlocked } from './network';
 
 export interface SolanaWallet {
   publicKey: string;
@@ -46,18 +45,28 @@ export function importFromSecretKey(secretKey: string | Uint8Array): SolanaWalle
  */
 export async function getBalance(publicKey: string, rpcUrl: string): Promise<string> {
   try {
-    const connection = new Connection(rpcUrl, 'confirmed');
+    console.log(`[Solana] Connecting to: ${rpcUrl}`);
+    console.log(`[Solana] Public key: ${publicKey}`);
     
-    // Block mainnet
-    if (rpcUrl.includes('mainnet-beta') || isMainnetBlocked(undefined, 'mainnet-beta')) {
-      throw new Error('Mainnet not allowed');
+    // Block mainnet only if URL contains mainnet-beta
+    if (rpcUrl.includes('mainnet-beta')) {
+      console.error('[Solana] Mainnet blocked!');
+      throw new Error('Mainnet not allowed - use devnet or testnet only');
     }
     
+    const connection = new Connection(rpcUrl, 'confirmed');
     const pubKey = new PublicKey(publicKey);
+    console.log(`[Solana] Fetching balance for: ${pubKey.toBase58()}`);
+    
     const balance = await connection.getBalance(pubKey);
-    return (balance / LAMPORTS_PER_SOL).toString();
+    const solBalance = (balance / LAMPORTS_PER_SOL).toString();
+    
+    console.log(`[Solana] Balance in lamports: ${balance}`);
+    console.log(`[Solana] Balance in SOL: ${solBalance}`);
+    
+    return solBalance;
   } catch (error) {
-    console.error('Error fetching Solana balance:', error);
+    console.error('[Solana] Error fetching balance:', error);
     return '0';
   }
 }
