@@ -22,11 +22,10 @@ A secure, open-source browser wallet for testing smart contracts across multiple
 
 | Network | Type | Chain/Cluster ID | RPC URL | Explorer | Faucet |
 |---------|------|------------------|---------|----------|--------|
-| **Ethereum Sepolia** | EVM | 11155111 | `https://sepolia.infura.io/v3/YOUR_KEY` | [sepolia.etherscan.io](https://sepolia.etherscan.io) | [sepoliafaucet.com](https://sepoliafaucet.com) |
-| **Polygon Mumbai** | EVM | 80001 | `https://rpc-mumbai.maticvigil.com` | [mumbai.polygonscan.com](https://mumbai.polygonscan.com) | [faucet.polygon.technology](https://faucet.polygon.technology) |
+| **Ethereum Sepolia** | EVM | 11155111 | `https://eth-sepolia.public.blastapi.io` | [sepolia.etherscan.io](https://sepolia.etherscan.io) | [sepoliafaucet.com](https://sepoliafaucet.com) |
+| **Polygon Amoy** | EVM | 80002 | `https://rpc-amoy.polygon.technology` | [amoy.polygonscan.com](https://amoy.polygonscan.com) | [faucet.polygon.technology](https://faucet.polygon.technology) |
 | **BSC Testnet** | EVM | 97 | `https://data-seed-prebsc-1-s1.binance.org:8545` | [testnet.bscscan.com](https://testnet.bscscan.com) | [Binance Faucet](https://testnet.binance.org/faucet-smart) |
 | **Avalanche Fuji** | EVM | 43113 | `https://api.avax-test.network/ext/bc/C/rpc` | [testnet.snowtrace.io](https://testnet.snowtrace.io) | [faucet.avax.network](https://faucet.avax.network) |
-| **Fantom Testnet** | EVM | 4002 | `https://rpc.testnet.fantom.network` | [testnet.ftmscan.com](https://testnet.ftmscan.com) | [faucet.fantom.network](https://faucet.fantom.network) |
 | **Local Hardhat/Anvil** | EVM | 31337 | `http://127.0.0.1:8545` | Local Dev | Built-in |
 | **Solana Devnet** | Ed25519 | devnet | `https://api.devnet.solana.com` | [explorer.solana.com](https://explorer.solana.com?cluster=devnet) | [faucet.solana.com](https://faucet.solana.com) |
 
