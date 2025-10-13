@@ -304,7 +304,62 @@ npm run build    # Production build
 
 ---
 
-## 📚 Documentation
+## 🧪 Testing with Smart Contracts
+
+The `contracts/` directory contains sample smart contracts to test the wallet's functionality:
+
+### Quick Start with Contracts
+
+```bash
+cd contracts
+npm install
+npm run compile
+
+# Start local Hardhat node
+npm run node
+
+# Deploy contracts (in another terminal)
+npm run deploy:local
+```
+
+### Available Contracts
+
+1. **SimpleStorage** - Test basic transactions and state changes
+2. **TestToken** - ERC20 token for testing transfers
+3. **Guestbook** - Test string parameters and events
+
+See [contracts/README.md](./contracts/README.md) for detailed instructions.
+
+---
+
+## � Developer Tools
+
+### Generate Solana Keypair (JSON Format)
+
+To deploy Solana programs, you need your wallet's keypair in JSON array format:
+
+```bash
+# Get your Solana private key from wallet Settings
+node scripts/generate-keypair.js YOUR_BASE64_SECRET_KEY
+```
+
+This creates `wallet-keypair.json` which you can:
+- Upload to [Solana Playground](https://beta.solpg.io/) for deploying programs
+- Use with Solana CLI commands
+- Import into other Solana development tools
+
+**Example:**
+```bash
+node scripts/generate-keypair.js lvaNRhIRQ8YUwc6vAiY0ySyFWjfN3vE2ON380fBrYrkcqw+lZ8OiasxZ74E8xqkycGPJVL3WDPkydN2M/tasrg==
+```
+
+Output: `[150,246,141,70,18,17,43,198,...]` saved to `wallet-keypair.json`
+
+📖 See [docs/SOLANA_DEPLOY_GUIDE.md](docs/SOLANA_DEPLOY_GUIDE.md) for full deployment guide.
+
+---
+
+## �📚 Documentation
 
 ### Key Code Snippets
 
