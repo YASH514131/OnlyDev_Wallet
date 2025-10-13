@@ -60,7 +60,16 @@ export function importFromMnemonic(mnemonic: string, index = 0): EvmWallet {
  */
 export async function getBalance(address: string, rpcUrl: string): Promise<string> {
   try {
+    // Check if it's a local network
+    const isLocal = rpcUrl.includes('127.0.0.1') || rpcUrl.includes('localhost');
+    
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+    
+    // Add timeout for local networks
+    if (isLocal) {
+      provider.polling = false;
+    }
+    
     const network = await provider.getNetwork();
     
     // Block mainnet
@@ -70,8 +79,14 @@ export async function getBalance(address: string, rpcUrl: string): Promise<strin
     
     const balance = await provider.getBalance(address);
     return ethers.utils.formatEther(balance);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching balance:', error);
+    
+    // Provide helpful message for local network errors
+    if (error.code === 'NETWORK_ERROR' || error.message?.includes('could not detect network')) {
+      console.warn('Local network not available. Start Hardhat/Anvil with: npx hardhat node');
+    }
+    
     return '0';
   }
 }

@@ -51,16 +51,6 @@ export const NETWORKS: Record<string, NetworkConfig> = {
     symbol: 'AVAX',
     decimals: 18,
   },
-  fantomTestnet: {
-    name: 'Fantom Testnet',
-    type: 'EVM',
-    chainId: 4002,
-    rpcUrl: 'https://rpc.testnet.fantom.network',
-    explorerUrl: 'https://testnet.ftmscan.com',
-    faucetUrl: 'https://faucet.fantom.network',
-    symbol: 'FTM',
-    decimals: 18,
-  },
   hardhat: {
     name: 'Local Hardhat / Anvil',
     type: 'EVM',

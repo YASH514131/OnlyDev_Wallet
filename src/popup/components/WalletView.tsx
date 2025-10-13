@@ -149,6 +149,11 @@ export const WalletView: React.FC<WalletViewProps> = ({ wallet, onNetworkChange 
               ⚠️ {error}
             </p>
           )}
+          {currentNetwork?.rpcUrl.includes('127.0.0.1') && balance === '0' && !loading && (
+            <p className="text-xs text-yellow-400 mt-2">
+              💡 Local node not running? Start with: <code className="bg-slate-700 px-1 rounded">npx hardhat node</code>
+            </p>
+          )}
           <button
             onClick={fetchBalance}
             className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
