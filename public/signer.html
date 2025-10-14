@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Transaction Signer</title>
+</head>
+<body>
+  <script type="module">
+    import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.esm.min.js';
+
+    const SEPOLIA_RPC_URLS = [
+      'https://sepolia.gateway.tenderly.co',
+      'https://ethereum-sepolia.publicnode.com',
+      'https://rpc.sepolia.org',
+      'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161',
+    ];
+
+    console.log('🔐 Transaction signer loaded and ready');
+
+    // Notify background that we're ready and wait for transaction
+    window.addEventListener('load', async () => {
+      console.log('🔐 Signer window fully loaded, waiting for transaction...');
+      
+      // Listen for transaction from background via storage
+      const checkForTransaction = async () => {
+        const result = await chrome.storage.local.get(['pendingSignerTransaction']);
+        
+        if (result.pendingSignerTransaction) {
+          console.log('📨 Received transaction to sign:', result.pendingSignerTransaction);
+          const { transaction, privateKey, requestId } = result.pendingSignerTransaction;
+          
+          // Clear the pending transaction
+          await chrome.storage.local.remove(['pendingSignerTransaction']);
+          
+          try {
+            console.log('🔐 Signing and sending transaction...');
+            
+            // Try each RPC endpoint
+            for (const rpcUrl of SEPOLIA_RPC_URLS) {
+              try {
+                console.log(`📡 Trying RPC: ${rpcUrl}`);
+                const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+                const wallet = new ethers.Wallet(privateKey, provider);
+                
+                // Prepare transaction object
+                const tx = {
+                  to: transaction.to,
+                  value: transaction.value || '0x0',
+                  data: transaction.data || '0x',
+                };
+                
+                // Add gas parameters
+                if (transaction.gas || transaction.gasLimit) {
+                  tx.gasLimit = transaction.gas || transaction.gasLimit;
+                }
+                
+                if (transaction.gasPrice) {
+                  tx.gasPrice = transaction.gasPrice;
+                } else if (transaction.maxFeePerGas) {
+                  tx.maxFeePerGas = transaction.maxFeePerGas;
+                  if (transaction.maxPriorityFeePerGas) {
+                    tx.maxPriorityFeePerGas = transaction.maxPriorityFeePerGas;
+                  }
+                }
+                
+                console.log('📤 Sending transaction:', tx);
+                const sentTx = await wallet.sendTransaction(tx);
+                console.log('✅ Transaction sent!', sentTx.hash);
+                
+                // Store result for background to pick up
+                await chrome.storage.local.set({
+                  [`signerResult_${requestId}`]: {
+                    success: true,
+                    hash: sentTx.hash,
+                  }
+                });
+                
+                console.log('✅ Result stored, closing window...');
+                window.close();
+                return;
+              } catch (error) {
+                console.warn(`❌ Failed with ${rpcUrl}:`, error.message);
+                // Try next endpoint
+                continue;
+              }
+            }
+            
+            // All endpoints failed
+            console.error('❌ All RPC endpoints failed');
+            await chrome.storage.local.set({
+              [`signerResult_${requestId}`]: {
+                success: false,
+                error: 'All RPC endpoints failed to send transaction',
+              }
+            });
+            window.close();
+          } catch (error) {
+            console.error('❌ Transaction signing error:', error);
+            await chrome.storage.local.set({
+              [`signerResult_${requestId}`]: {
+                success: false,
+                error: error.message,
+              }
+            });
+            window.close();
+          }
+        }
+      };
+      
+      // Check immediately and then poll every 100ms
+      checkForTransaction();
+      const interval = setInterval(checkForTransaction, 100);
+      
+      // Stop polling after 10 seconds
+      setTimeout(() => {
+        clearInterval(interval);
+        console.log('⏱️ Signer timeout, closing...');
+        window.close();
+      }, 10000);
+    });
+
+    console.log('✅ Transaction signer initialized');
+  </script>
+</body>
+</html>

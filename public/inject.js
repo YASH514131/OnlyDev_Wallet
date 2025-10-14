@@ -7,6 +7,13 @@
 (function() {
   'use strict';
   
+  // Immediately block Phantom from taking over ethereum
+  if (window.ethereum && window.ethereum.isPhantom) {
+    console.log('🧩 Phantom detected, overriding with TestNet Wallet');
+    window.phantomEthereum = window.ethereum;
+    delete window.ethereum;
+  }
+  
   let requestId = 0;
   const pendingRequests = new Map();
   
@@ -56,30 +63,133 @@
     }
   });
   
+  // Helper function to forward RPC calls to public Sepolia endpoint
+  async function forwardToRPC(method, params) {
+    // Try multiple RPC endpoints for better reliability
+    const RPC_URLS = [
+      'https://sepolia.gateway.tenderly.co',
+      'https://ethereum-sepolia.publicnode.com',
+      'https://rpc.sepolia.org',
+      'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', // Public Infura key
+    ];
+    
+    for (const RPC_URL of RPC_URLS) {
+      try {
+        const response = await fetch(RPC_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method,
+            params,
+          }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.error) {
+          // Log the error but try next endpoint
+          console.warn('⚠️ RPC error from', RPC_URL, ':', data.error.message);
+          throw new Error(data.error.message);
+        }
+        
+        console.log('🟢 RPC response for', method, ':', data.result);
+        return data.result;
+      } catch (error) {
+        console.warn('⚠️ RPC endpoint failed:', RPC_URL, error.message);
+        // Try next endpoint
+        continue;
+      }
+    }
+    
+    // All endpoints failed
+    console.error('🔴 All RPC endpoints failed for method:', method);
+    throw new Error('Failed to connect to Sepolia network. Please check your internet connection.');
+  }
+  
   // EVM Wallet API (similar to window.ethereum)
   const testnetWallet = {
     isTestnetWallet: true,
-    isMetaMask: false, // Explicitly not MetaMask
+    isMetaMask: true, // Pretend to be MetaMask so Remix detects us
+    isPhantom: false, // Explicitly not Phantom
+    isBraveWallet: false,
+    isCoinbaseWallet: false,
+    isRabby: false,
+    _metamask: {
+      isUnlocked: () => Promise.resolve(true),
+    },
     
     // Request user accounts
     async request(args) {
       const { method, params = [] } = args;
       
+      console.log('🔵 Wallet request:', method, params);
+      
       switch (method) {
         case 'eth_requestAccounts':
-          const response = await sendMessage('REQUEST_ACCOUNTS');
-          return response.accounts || [];
+          try {
+            const response = await sendMessage('REQUEST_ACCOUNTS');
+            console.log('🔵 REQUEST_ACCOUNTS response:', response);
+            if (response.success && response.accounts) {
+              return response.accounts;
+            } else {
+              throw new Error(response.error || 'Failed to get accounts');
+            }
+          } catch (error) {
+            console.error('🔴 eth_requestAccounts error:', error);
+            throw error;
+          }
           
         case 'eth_accounts':
-          const accountsResponse = await sendMessage('GET_ACCOUNTS');
-          return accountsResponse.accounts || [];
+          try {
+            const accountsResponse = await sendMessage('GET_ACCOUNTS');
+            console.log('🔵 GET_ACCOUNTS response:', accountsResponse);
+            return accountsResponse.accounts || [];
+          } catch (error) {
+            console.error('🔴 eth_accounts error:', error);
+            return [];
+          }
           
         case 'eth_chainId':
           const stateResponse = await sendMessage('GET_WALLET_STATE');
-          return stateResponse.data?.selectedNetwork || 'sepolia';
+          return stateResponse.data?.selectedNetwork || '0xaa36a7'; // Sepolia chainId
+          
+        case 'net_version':
+          return '11155111'; // Sepolia network ID (decimal)
+          
+        case 'eth_getBalance':
+        case 'eth_blockNumber':
+        case 'eth_getBlockByNumber':
+        case 'eth_getTransactionCount':
+        case 'eth_getTransactionReceipt':
+        case 'eth_call':
+        case 'eth_estimateGas':
+        case 'eth_gasPrice':
+        case 'eth_getCode':
+        case 'eth_getLogs':
+          // Forward these to Sepolia RPC
+          return await forwardToRPC(method, params);
           
         case 'eth_sendTransaction':
-          return await sendMessage('SEND_TRANSACTION', params[0]);
+          try {
+            const response = await sendMessage('SEND_TRANSACTION', params[0]);
+            console.log('🔵 SEND_TRANSACTION response:', response);
+            if (response.success && response.hash) {
+              return response.hash;
+            } else {
+              throw new Error(response.error || 'Transaction failed');
+            }
+          } catch (error) {
+            console.error('🔴 eth_sendTransaction error:', error);
+            throw error;
+          }
           
         case 'eth_sign':
         case 'personal_sign':
@@ -90,6 +200,7 @@
           return null;
           
         default:
+          console.warn('🟡 Unsupported method:', method);
           throw new Error(`Method ${method} not supported`);
       }
     },
@@ -189,8 +300,71 @@
     configurable: false,
   });
   
+  // Force inject as window.ethereum for Remix compatibility
+  // Store existing ethereum provider if present
+  const existingProvider = window.ethereum;
+  
+  // Override window.ethereum completely
+  try {
+    delete window.ethereum;
+  } catch (e) {
+    // If can't delete, try to override
+  }
+  
+  Object.defineProperty(window, 'ethereum', {
+    value: testnetWallet,
+    writable: true,
+    configurable: true,
+  });
+  
+  // Also hide Phantom's specific properties
+  if (window.phantom) {
+    window.phantomBackup = window.phantom;
+    delete window.phantom;
+  }
+  
+  // Store backup reference
+  if (existingProvider) {
+    window.phantomEthereum = existingProvider;
+    console.log('⚠️ Phantom wallet moved to window.phantomEthereum');
+  }
+  
+  console.log('🧩 TestNet Wallet injected as window.ethereum (Remix compatible)');
+  console.log('Provider flags:', {
+    isTestnetWallet: window.ethereum.isTestnetWallet,
+    isPhantom: window.ethereum.isPhantom,
+    isMetaMask: window.ethereum.isMetaMask
+  });
+  console.log('🔍 Test the wallet: Type "window.ethereum.request({ method: \'eth_requestAccounts\' })" in console');
+  
   // Announce to the page that the wallet is ready
   window.dispatchEvent(new Event('testnetWallet#initialized'));
+  window.dispatchEvent(new Event('ethereum#initialized'));
+  
+  // EIP-6963: Announce provider (new standard for Remix)
+  const announceProvider = () => {
+    const info = {
+      uuid: crypto.randomUUID ? crypto.randomUUID() : 'testnet-wallet-' + Date.now(),
+      name: 'TestNet Developer Wallet',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%234F46E5"/><text x="50" y="70" font-size="60" text-anchor="middle" fill="white">T</text></svg>',
+      rdns: 'io.github.testnet-wallet',
+    };
+
+    window.dispatchEvent(
+      new CustomEvent('eip6963:announceProvider', {
+        detail: Object.freeze({ info, provider: testnetWallet }),
+      })
+    );
+  };
+
+  // Announce immediately
+  announceProvider();
+
+  // Listen for request to announce provider
+  window.addEventListener('eip6963:requestProvider', (event) => {
+    announceProvider();
+  });
   
   console.log('🧩 TestNet Wallet APIs injected');
+  console.log('📢 EIP-6963 provider announced');
 })();

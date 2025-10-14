@@ -24,6 +24,31 @@ export default defineConfig({
         if (existsSync(`${publicDir}/inject.js`)) {
           copyFileSync(`${publicDir}/inject.js`, `${buildDir}/inject.js`);
         }
+        
+        // Copy approval.js
+        if (existsSync(`${publicDir}/approval.js`)) {
+          copyFileSync(`${publicDir}/approval.js`, `${buildDir}/approval.js`);
+        }
+        
+        // Copy approval.html
+        if (existsSync('approval.html')) {
+          copyFileSync('approval.html', `${buildDir}/approval.html`);
+        }
+        
+        // Copy transaction.js
+        if (existsSync(`${publicDir}/transaction.js`)) {
+          copyFileSync(`${publicDir}/transaction.js`, `${buildDir}/transaction.js`);
+        }
+        
+        // Copy transaction.html
+        if (existsSync(`${publicDir}/transaction.html`)) {
+          copyFileSync(`${publicDir}/transaction.html`, `${buildDir}/transaction.html`);
+        }
+        
+        // Copy signer.html
+        if (existsSync(`${publicDir}/signer.html`)) {
+          copyFileSync(`${publicDir}/signer.html`, `${buildDir}/signer.html`);
+        }
       }
     }
   ],

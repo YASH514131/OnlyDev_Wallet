@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Header, WalletView, SettingsView, CreateWalletView } from './components';
 import { getFromMemory, storeInMemory, hasEncryptedData, refreshSession, getRemainingSessionTime, clearMemory } from '../utils/storage';
-import { createEvmWallet } from '../utils/evm';
-import { createSolanaWallet } from '../utils/solana';
+import { createEvmWallet, importFromMnemonic, importFromPrivateKey } from '../utils/evm';
+import { createSolanaWallet, importFromSecretKey } from '../utils/solana';
 
 export type View = 'create' | 'wallet' | 'settings';
 
@@ -146,6 +146,14 @@ const Popup: React.FC = () => {
       // Also store in memory (session)
       storeInMemory(walletData);
       
+      // Store walletState for background script access
+      await chrome.storage.local.set({ 
+        walletState: {
+          evmAddress: evmWallet.address,
+          solanaPublicKey: solanaWallet.publicKey,
+        }
+      });
+      
       setWallet(newWallet);
       
       // Show mnemonic first if available
@@ -190,6 +198,14 @@ const Popup: React.FC = () => {
       // Store in memory for current session
       storeInMemory(walletData);
       
+      // Also store walletState for background script access
+      await chrome.storage.local.set({ 
+        walletState: {
+          evmAddress,
+          solanaPublicKey,
+        }
+      });
+      
       setWallet(unlockedWallet);
       setView('wallet');
     } catch (error) {
@@ -200,18 +216,22 @@ const Popup: React.FC = () => {
 
   const handleImportWallet = async (evmKey: string, solanaKey: string, password: string) => {
     try {
-      const { importFromPrivateKey, importFromMnemonic } = require('../utils/evm');
-      const { importFromSecretKey } = require('../utils/solana');
+      console.log('🔄 Starting wallet import...');
       
       let evmWallet;
       // Check if it's a mnemonic or private key
       if (evmKey.includes(' ')) {
+        console.log('📝 Importing from mnemonic...');
         evmWallet = importFromMnemonic(evmKey);
       } else {
+        console.log('🔑 Importing from private key...');
         evmWallet = importFromPrivateKey(evmKey);
       }
       
+      console.log('✅ EVM wallet imported:', evmWallet.address);
+      console.log('🔄 Importing Solana wallet...');
       const solanaWallet = importFromSecretKey(solanaKey);
+      console.log('✅ Solana wallet imported:', solanaWallet.publicKey);
       
       const newWallet: WalletState = {
         evmAddress: evmWallet.address,
@@ -229,18 +249,31 @@ const Popup: React.FC = () => {
         selectedNetwork: 'sepolia',
       };
       
+      console.log('💾 Storing encrypted wallet...');
       // Store encrypted
       const { storeEncrypted } = await import('../utils/storage');
       await storeEncrypted(walletData, password);
       
+      console.log('💾 Storing in memory...');
       // Store in memory
       storeInMemory(walletData);
       
+      console.log('💾 Storing wallet state...');
+      // Store walletState for background script access
+      await chrome.storage.local.set({ 
+        walletState: {
+          evmAddress: evmWallet.address,
+          solanaPublicKey: solanaWallet.publicKey,
+        }
+      });
+      
+      console.log('✅ Wallet import complete!');
       setWallet(newWallet);
       setView('wallet');
-    } catch (error) {
-      console.error('Failed to import wallet:', error);
-      alert('Failed to import wallet. Please check your keys and try again.');
+    } catch (error: any) {
+      console.error('❌ Failed to import wallet:', error);
+      console.error('Error details:', error.message, error.stack);
+      alert(`Failed to import wallet: ${error.message}\n\nPlease check the console for details.`);
     }
   };
 

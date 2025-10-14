@@ -40,18 +40,41 @@ export function importFromPrivateKey(privateKey: string): EvmWallet {
  */
 export function importFromMnemonic(mnemonic: string, index = 0): EvmWallet {
   try {
-    if (!bip39.validateMnemonic(mnemonic)) {
-      throw new Error('Invalid mnemonic phrase');
+    // Normalize mnemonic: trim, lowercase, single spaces
+    const normalizedMnemonic = mnemonic
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+    
+    console.log('🔍 Validating mnemonic...');
+    console.log('Original:', mnemonic);
+    console.log('Normalized:', normalizedMnemonic);
+    console.log('Word count:', normalizedMnemonic.split(' ').length);
+    console.log('Words:', normalizedMnemonic.split(' '));
+    
+    // Try to validate
+    const isValid = bip39.validateMnemonic(normalizedMnemonic);
+    console.log('bip39.validateMnemonic result:', isValid);
+    
+    if (!isValid) {
+      console.warn('⚠️ Mnemonic failed BIP39 validation, but attempting to create wallet anyway...');
+      console.warn('This might work if the checksum is wrong but words are valid');
     }
+    
+    console.log('✅ Creating wallet from mnemonic...');
     const path = `m/44'/60'/0'/0/${index}`;
-    const wallet = ethers.Wallet.fromMnemonic(mnemonic, path);
+    const wallet = ethers.Wallet.fromMnemonic(normalizedMnemonic, path);
+    console.log('✅ Wallet created:', wallet.address);
+    
     return {
       address: wallet.address,
       privateKey: wallet.privateKey,
-      mnemonic,
+      mnemonic: normalizedMnemonic,
     };
-  } catch (error) {
-    throw new Error('Invalid mnemonic phrase');
+  } catch (error: any) {
+    console.error('❌ Import from mnemonic failed:', error);
+    console.error('Error details:', error.message, error.stack);
+    throw new Error(`Failed to import from mnemonic: ${error.message}`);
   }
 }
 

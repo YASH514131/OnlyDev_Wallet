@@ -3,6 +3,12 @@
  * Handles communication between content scripts and popup
  */
 
+// Store pending connection requests
+const pendingRequests = new Map<number, (response: any) => void>();
+
+// Store pending transaction requests
+const pendingTransactions = new Map<number, (response: any) => void>();
+
 // Keep service worker alive
 let keepAliveInterval: NodeJS.Timeout | undefined;
 
@@ -19,7 +25,7 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // Handle messages from content scripts and popup
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Background received message:', request);
   
   switch (request.type) {
@@ -32,7 +38,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       return true;
       
     case 'SEND_TRANSACTION':
-      handleSendTransaction(request.data, sendResponse);
+      handleSendTransaction(request.data, sender, sendResponse);
       return true;
       
     case 'GET_ACCOUNTS':
@@ -40,8 +46,24 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       return true;
       
     case 'REQUEST_ACCOUNTS':
-      handleRequestAccounts(sendResponse);
+      handleRequestAccounts(sender, sendResponse);
       return true;
+      
+    case 'APPROVE_CONNECTION':
+      handleApproveConnection(request.tabId, request.accounts);
+      return false;
+      
+    case 'REJECT_CONNECTION':
+      handleRejectConnection(request.tabId);
+      return false;
+      
+    case 'APPROVE_TRANSACTION':
+      handleApproveTransaction(request.tabId, request.transaction);
+      return false;
+      
+    case 'REJECT_TRANSACTION':
+      handleRejectTransaction(request.tabId);
+      return false;
       
     case 'SWITCH_NETWORK':
       handleSwitchNetwork(request.data, sendResponse);
@@ -73,19 +95,7 @@ async function handleGetWalletState(sendResponse: (response: any) => void) {
 // Handle transaction signing
 async function handleSignTransaction(data: any, sendResponse: (response: any) => void) {
   try {
-    // This would open the popup for user approval
-    // For now, we'll just acknowledge the request
-    console.log('Sign transaction request:', data);
-    
-    // Create notification for user approval
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Transaction Signature Request',
-      message: `Sign transaction to ${data.to}`,
-      priority: 2,
-    });
-    
+    console.log('📝 Sign transaction request:', data);
     sendResponse({ success: true, message: 'Transaction signing requested' });
   } catch (error: any) {
     sendResponse({ success: false, error: error.message });
@@ -93,20 +103,31 @@ async function handleSignTransaction(data: any, sendResponse: (response: any) =>
 }
 
 // Handle sending transaction
-async function handleSendTransaction(data: any, sendResponse: (response: any) => void) {
+async function handleSendTransaction(data: any, sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) {
   try {
-    console.log('Send transaction request:', data);
+    console.log('💸 Send transaction request:', data);
     
-    // Create notification
-    chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Transaction Request',
-      message: `Send ${data.value} to ${data.to}`,
-      priority: 2,
+    // Get the tab ID and origin from sender
+    const tabId = sender.tab?.id;
+    const origin = sender.tab?.url ? new URL(sender.tab.url).origin : 'Unknown';
+    
+    if (!tabId) {
+      sendResponse({ success: false, error: 'Cannot identify sender tab.' });
+      return;
+    }
+    
+    // Store the pending transaction
+    pendingTransactions.set(tabId, sendResponse);
+    
+    // Open transaction approval popup
+    const txParam = encodeURIComponent(JSON.stringify(data));
+    chrome.windows.create({
+      url: `transaction.html?tabId=${tabId}&origin=${encodeURIComponent(origin)}&tx=${txParam}`,
+      type: 'popup',
+      width: 420,
+      height: 700,
     });
     
-    sendResponse({ success: true, message: 'Transaction requested' });
   } catch (error: any) {
     sendResponse({ success: false, error: error.message });
   }
@@ -133,23 +154,214 @@ async function handleGetAccounts(sendResponse: (response: any) => void) {
 }
 
 // Handle request accounts (requires user approval)
-async function handleRequestAccounts(sendResponse: (response: any) => void) {
+async function handleRequestAccounts(sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) {
   try {
-    const result = await chrome.storage.local.get(['walletState', 'connectedSites']);
-    const walletState = result.walletState;
+    // Check both session storage and walletState
+    const SESSION_KEY = 'testnet_wallet_session';
+    const result = await chrome.storage.local.get([SESSION_KEY, 'walletState']);
     
-    if (!walletState || !walletState.evmAddress) {
-      sendResponse({ success: false, error: 'No wallet found' });
+    let evmAddress = null;
+    
+    // First check walletState (where address is stored when unlocked)
+    if (result.walletState && result.walletState.evmAddress) {
+      evmAddress = result.walletState.evmAddress;
+    }
+    
+    console.log('📋 REQUEST_ACCOUNTS - walletState:', result.walletState);
+    console.log('📋 REQUEST_ACCOUNTS - sessionData:', result[SESSION_KEY]);
+    console.log('📋 REQUEST_ACCOUNTS - evmAddress:', evmAddress);
+    
+    if (!evmAddress) {
+      console.error('❌ No wallet found or locked');
+      sendResponse({ 
+        success: false, 
+        error: 'Wallet is locked or not initialized. Please unlock your TestNet Wallet.' 
+      });
       return;
     }
     
-    // In a real implementation, this would prompt the user for approval
+    // Get the tab ID and origin
+    const tabId = sender.tab?.id;
+    const origin = sender.tab?.url ? new URL(sender.tab.url).origin : 'Unknown';
+    
+    if (!tabId) {
+      sendResponse({ success: false, error: 'Cannot identify sender tab.' });
+      return;
+    }
+    
+    // Store the pending request
+    pendingRequests.set(tabId, sendResponse);
+    
+    // Open approval popup
+    chrome.windows.create({
+      url: `approval.html?tabId=${tabId}&origin=${encodeURIComponent(origin)}`,
+      type: 'popup',
+      width: 400,
+      height: 600,
+    });
+    
+  } catch (error: any) {
+    console.error('❌ Error in handleRequestAccounts:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle connection approval
+function handleApproveConnection(tabId: number, accounts: string[]) {
+  const sendResponse = pendingRequests.get(tabId);
+  if (sendResponse) {
+    console.log('✅ Connection approved for tab:', tabId);
     sendResponse({
       success: true,
-      accounts: [walletState.evmAddress],
+      accounts,
     });
-  } catch (error: any) {
-    sendResponse({ success: false, error: error.message });
+    pendingRequests.delete(tabId);
+  }
+}
+
+// Handle connection rejection
+function handleRejectConnection(tabId: number) {
+  const sendResponse = pendingRequests.get(tabId);
+  if (sendResponse) {
+    console.log('❌ Connection rejected for tab:', tabId);
+    sendResponse({
+      success: false,
+      error: 'User rejected the connection request.',
+    });
+    pendingRequests.delete(tabId);
+  }
+}
+
+// Handle transaction approval
+async function handleApproveTransaction(tabId: number, transaction: any) {
+  const sendResponse = pendingTransactions.get(tabId);
+  if (sendResponse) {
+    console.log('✅ Transaction approved for tab:', tabId);
+    
+    try {
+      // Get wallet from session storage
+      const SESSION_KEY = 'testnet_wallet_session';
+      const result = await chrome.storage.local.get([SESSION_KEY]);
+      const sessionData = result[SESSION_KEY];
+      
+      if (!sessionData || !sessionData.evmPrivateKey) {
+        throw new Error('Wallet is locked. Please unlock your wallet.');
+      }
+      
+      // Create a temporary offscreen document to sign the transaction
+      // (Service workers can't use ethers.js directly)
+      const signerUrl = chrome.runtime.getURL('signer.html');
+      
+      console.log('🔐 Opening signer window...');
+      
+      // Generate unique request ID
+      const requestId = Date.now().toString();
+      
+      // Store transaction for signer to pick up
+      await chrome.storage.local.set({
+        pendingSignerTransaction: {
+          transaction,
+          privateKey: sessionData.evmPrivateKey,
+          requestId,
+        }
+      });
+      
+      // Open signer in background
+      const signerWindow = await chrome.windows.create({
+        url: signerUrl,
+        type: 'popup',
+        width: 1,
+        height: 1,
+        left: -9999,
+        top: -9999,
+        focused: false,
+      });
+      
+      console.log('⏳ Waiting for signer to process transaction...');
+      
+      // Poll for result
+      const pollForResult = async (): Promise<any> => {
+        for (let i = 0; i < 100; i++) { // Poll for up to 10 seconds
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          const result = await chrome.storage.local.get([`signerResult_${requestId}`]);
+          if (result[`signerResult_${requestId}`]) {
+            // Clean up
+            await chrome.storage.local.remove([`signerResult_${requestId}`]);
+            return result[`signerResult_${requestId}`];
+          }
+        }
+        throw new Error('Signer timeout');
+      };
+      
+      try {
+        const response = await pollForResult();
+        console.log('📥 Received response from signer:', response);
+        
+        // Close signer window if still open
+        if (signerWindow.id) {
+          try {
+            await chrome.windows.remove(signerWindow.id);
+            console.log('🗑️ Signer window closed');
+          } catch (e) {
+            console.warn('Failed to close signer window:', e);
+          }
+        }
+        
+        if (response && response.success) {
+          console.log('✅ Transaction broadcasted:', response.hash);
+          sendResponse({
+            success: true,
+            hash: response.hash,
+          });
+        } else {
+          console.error('❌ Transaction failed:', response?.error);
+          sendResponse({
+            success: false,
+            error: response?.error || 'Transaction failed',
+          });
+        }
+      } catch (error: any) {
+        console.error('❌ Signer error:', error);
+        
+        // Close signer window
+        if (signerWindow.id) {
+          try {
+            await chrome.windows.remove(signerWindow.id);
+          } catch (e) {
+            console.warn('Failed to close signer window:', e);
+          }
+        }
+        
+        sendResponse({
+          success: false,
+          error: error.message || 'Transaction signing failed',
+        });
+      }
+      
+      pendingTransactions.delete(tabId);
+      
+    } catch (error: any) {
+      console.error('❌ Error approving transaction:', error);
+      sendResponse({
+        success: false,
+        error: error.message,
+      });
+      pendingTransactions.delete(tabId);
+    }
+  }
+}
+
+// Handle transaction rejection
+function handleRejectTransaction(tabId: number) {
+  const sendResponse = pendingTransactions.get(tabId);
+  if (sendResponse) {
+    console.log('❌ Transaction rejected for tab:', tabId);
+    sendResponse({
+      success: false,
+      error: 'User rejected the transaction.',
+    });
+    pendingTransactions.delete(tabId);
   }
 }
 
