@@ -39,7 +39,7 @@ export function importFromSecretKey(secretKey: string | Uint8Array): SolanaWalle
       publicKey: keypair.publicKey.toBase58(),
       secretKey: keypair.secretKey,
     };
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Invalid Solana secret key');
   }
 }
@@ -49,28 +49,28 @@ export function importFromSecretKey(secretKey: string | Uint8Array): SolanaWalle
  */
 export async function getBalance(publicKey: string, rpcUrl: string): Promise<string> {
   try {
-    console.log(`[Solana] Connecting to: ${rpcUrl}`);
-    console.log(`[Solana] Public key: ${publicKey}`);
+    // console.log(`[Solana] Connecting to: ${rpcUrl}`);
+    // console.log(`[Solana] Public key: ${publicKey}`);
     
     // Block mainnet only if URL contains mainnet-beta
     if (rpcUrl.includes('mainnet-beta')) {
-      console.error('[Solana] Mainnet blocked!');
+  // console.error('[Solana] Mainnet blocked!');
       throw new Error('Mainnet not allowed - use devnet or testnet only');
     }
     
     const connection = new Connection(rpcUrl, 'confirmed');
     const pubKey = new PublicKey(publicKey);
-    console.log(`[Solana] Fetching balance for: ${pubKey.toBase58()}`);
+  // console.log(`[Solana] Fetching balance for: ${pubKey.toBase58()}`);
     
     const balance = await connection.getBalance(pubKey);
     const solBalance = (balance / LAMPORTS_PER_SOL).toString();
     
-    console.log(`[Solana] Balance in lamports: ${balance}`);
-    console.log(`[Solana] Balance in SOL: ${solBalance}`);
+  // console.log(`[Solana] Balance in lamports: ${balance}`);
+  // console.log(`[Solana] Balance in SOL: ${solBalance}`);
     
     return solBalance;
-  } catch (error) {
-    console.error('[Solana] Error fetching balance:', error);
+  } catch (_error) {
+    // console.error('[Solana] Error fetching balance:', _error);
     return '0';
   }
 }

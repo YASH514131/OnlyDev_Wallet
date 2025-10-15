@@ -57,7 +57,7 @@ export async function encrypt(data: string, password: string): Promise<string> {
     
     // Convert to base64
     return btoa(String.fromCharCode(...combined));
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Encryption failed');
   }
 }
@@ -85,7 +85,7 @@ export async function decrypt(encryptedData: string, password: string): Promise<
     
     const decoder = new TextDecoder();
     return decoder.decode(decrypted);
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Decryption failed - incorrect password');
   }
 }

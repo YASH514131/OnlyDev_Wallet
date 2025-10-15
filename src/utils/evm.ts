@@ -30,7 +30,7 @@ export function importFromPrivateKey(privateKey: string): EvmWallet {
       address: wallet.address,
       privateKey: wallet.privateKey,
     };
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Invalid private key');
   }
 }
@@ -46,25 +46,25 @@ export function importFromMnemonic(mnemonic: string, index = 0): EvmWallet {
       .toLowerCase()
       .replace(/\s+/g, ' ');
     
-    console.log('🔍 Validating mnemonic...');
-    console.log('Original:', mnemonic);
-    console.log('Normalized:', normalizedMnemonic);
-    console.log('Word count:', normalizedMnemonic.split(' ').length);
-    console.log('Words:', normalizedMnemonic.split(' '));
+  // console.log('🔍 Validating mnemonic...');
+  // console.log('Original:', mnemonic);
+  // console.log('Normalized:', normalizedMnemonic);
+  // console.log('Word count:', normalizedMnemonic.split(' ').length);
+  // console.log('Words:', normalizedMnemonic.split(' '));
     
     // Try to validate
     const isValid = bip39.validateMnemonic(normalizedMnemonic);
-    console.log('bip39.validateMnemonic result:', isValid);
+  // console.log('bip39.validateMnemonic result:', isValid);
     
     if (!isValid) {
-      console.warn('⚠️ Mnemonic failed BIP39 validation, but attempting to create wallet anyway...');
-      console.warn('This might work if the checksum is wrong but words are valid');
+  // console.warn('⚠️ Mnemonic failed BIP39 validation, but attempting to create wallet anyway...');
+  // console.warn('This might work if the checksum is wrong but words are valid');
     }
     
-    console.log('✅ Creating wallet from mnemonic...');
+  // console.log('✅ Creating wallet from mnemonic...');
     const path = `m/44'/60'/0'/0/${index}`;
     const wallet = ethers.Wallet.fromMnemonic(normalizedMnemonic, path);
-    console.log('✅ Wallet created:', wallet.address);
+  // console.log('✅ Wallet created:', wallet.address);
     
     return {
       address: wallet.address,
@@ -72,8 +72,8 @@ export function importFromMnemonic(mnemonic: string, index = 0): EvmWallet {
       mnemonic: normalizedMnemonic,
     };
   } catch (error: any) {
-    console.error('❌ Import from mnemonic failed:', error);
-    console.error('Error details:', error.message, error.stack);
+  // console.error('❌ Import from mnemonic failed:', error);
+  // console.error('Error details:', error.message, error.stack);
     throw new Error(`Failed to import from mnemonic: ${error.message}`);
   }
 }
@@ -103,11 +103,11 @@ export async function getBalance(address: string, rpcUrl: string): Promise<strin
     const balance = await provider.getBalance(address);
     return ethers.utils.formatEther(balance);
   } catch (error: any) {
-    console.error('Error fetching balance:', error);
+  // console.error('Error fetching balance:', error);
     
     // Provide helpful message for local network errors
     if (error.code === 'NETWORK_ERROR' || error.message?.includes('could not detect network')) {
-      console.warn('Local network not available. Start Hardhat/Anvil with: npx hardhat node');
+  // console.warn('Local network not available. Start Hardhat/Anvil with: npx hardhat node');
     }
     
     return '0';
@@ -199,8 +199,8 @@ export async function estimateGas(
       data: data || '0x',
     });
     return gasEstimate.toString();
-  } catch (error) {
-    console.error('Gas estimation failed:', error);
+  } catch (_error) {
+    // console.error('Gas estimation failed:', _error);
     return '21000'; // Default gas limit
   }
 }

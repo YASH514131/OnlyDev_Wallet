@@ -21,13 +21,13 @@ export const WalletView: React.FC<WalletViewProps> = ({ wallet, onNetworkChange 
   const currentAddress = isEvm ? wallet.evmAddress : wallet.solanaPublicKey;
 
   useEffect(() => {
-    console.log('=== WALLET VIEW EFFECT ===');
-    console.log('Selected network:', wallet.selectedNetwork);
-    console.log('Network config:', currentNetwork);
-    console.log('Network type:', currentNetwork?.type);
-    console.log('Is EVM:', isEvm);
-    console.log('Current address:', currentAddress);
-    console.log('========================');
+  // console.log('=== WALLET VIEW EFFECT ===');
+  // console.log('Selected network:', wallet.selectedNetwork);
+  // console.log('Network config:', currentNetwork);
+  // console.log('Network type:', currentNetwork?.type);
+  // console.log('Is EVM:', isEvm);
+  // console.log('Current address:', currentAddress);
+  // console.log('========================');
     
     setBalance('0'); // Reset balance
     setError(null); // Reset error
@@ -37,40 +37,40 @@ export const WalletView: React.FC<WalletViewProps> = ({ wallet, onNetworkChange 
 
   const fetchBalance = async () => {
     if (!currentNetwork) {
-      console.warn('No network selected');
+      // console.warn('No network selected');
       setError('No network selected');
       return;
     }
     
-    console.log('=== FETCHING BALANCE ===');
-    console.log('Network:', currentNetwork.name);
-    console.log('Type:', currentNetwork.type);
-    console.log('RPC URL:', currentNetwork.rpcUrl);
+  // console.log('=== FETCHING BALANCE ===');
+  // console.log('Network:', currentNetwork.name);
+  // console.log('Type:', currentNetwork.type);
+  // console.log('RPC URL:', currentNetwork.rpcUrl);
     
     setLoading(true);
     setError(null);
     
     try {
       if (isEvm) {
-        console.log('>>> Fetching EVM balance for:', wallet.evmAddress);
+  // console.log('>>> Fetching EVM balance for:', wallet.evmAddress);
         const bal = await getEvmBalance(wallet.evmAddress, currentNetwork.rpcUrl);
-        console.log('>>> EVM Balance result:', bal);
+  // console.log('>>> EVM Balance result:', bal);
         setBalance(bal || '0');
       } else {
-        console.log('>>> Fetching Solana balance for:', wallet.solanaPublicKey);
+  // console.log('>>> Fetching Solana balance for:', wallet.solanaPublicKey);
         const bal = await getSolanaBalance(wallet.solanaPublicKey, currentNetwork.rpcUrl);
-        console.log('>>> Solana Balance result:', bal);
-        console.log('>>> Balance type:', typeof bal);
-        console.log('>>> Setting balance state to:', bal);
+  // console.log('>>> Solana Balance result:', bal);
+  // console.log('>>> Balance type:', typeof bal);
+  // console.log('>>> Setting balance state to:', bal);
         setBalance(bal || '0');
         
         // Force a small delay to ensure state update
         await new Promise(resolve => setTimeout(resolve, 100));
-        console.log('>>> Balance state after update should be:', bal);
+  // console.log('>>> Balance state after update should be:', bal);
       }
-      console.log('=== BALANCE FETCH COMPLETE ===');
+      // console.log('=== BALANCE FETCH COMPLETE ===');
     } catch (error: any) {
-      console.error('!!! Failed to fetch balance:', error);
+      // console.error('!!! Failed to fetch balance:', error);
       setError(error.message || 'Failed to fetch balance');
       setBalance('0');
     } finally {

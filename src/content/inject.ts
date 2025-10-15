@@ -21,8 +21,8 @@ function injectScript() {
     } else {
       target.appendChild(script);
     }
-  } catch (error) {
-    console.error('Failed to inject TestNet Wallet:', error);
+  } catch (_error) {
+  // console.error('Failed to inject TestNet Wallet:', _error);
   }
 }
 
@@ -57,7 +57,7 @@ window.addEventListener('message', async (event) => {
   
   // Ignore our own response messages to prevent infinite loop
   if (payload.type && payload.type.startsWith('TESTNET_WALLET_') && !payload.type.endsWith('_RESPONSE')) {
-    console.log('📤 Content script received:', payload.type);
+  // console.log('📤 Content script received:', payload.type);
     
     try {
       // Check if extension context is valid
@@ -70,10 +70,10 @@ window.addEventListener('message', async (event) => {
         type: payload.type.replace('TESTNET_WALLET_', ''),
         data: payload.data,
       };
-      console.log('📤 Forwarding to background:', backgroundRequest);
+  // console.log('📤 Forwarding to background:', backgroundRequest);
       
       const response = await chrome.runtime.sendMessage(backgroundRequest);
-      console.log('📥 Background response:', response);
+  // console.log('📥 Background response:', response);
       
       // Send response back to page
       window.postMessage({
@@ -82,9 +82,9 @@ window.addEventListener('message', async (event) => {
         response,
         token: trustedToken,
       }, '*');
-      console.log('✅ Response sent to page');
+  // console.log('✅ Response sent to page');
     } catch (error: any) {
-      console.error('❌ Error forwarding message:', error);
+  // console.error('❌ Error forwarding message:', error);
       
       // Provide helpful error message
       let errorMessage = error.message;
@@ -106,13 +106,13 @@ window.addEventListener('message', async (event) => {
 chrome.runtime.onMessage.addListener((message) => {
   try {
     if (!chrome.runtime?.id) {
-      console.warn('⚠️ Extension context invalidated, skipping network change notification');
+  // console.warn('⚠️ Extension context invalidated, skipping network change notification');
       return;
     }
     
     if (message.type === 'NETWORK_CHANGED') {
       if (!trustedToken) {
-        console.warn('⚠️ Network change received before handshake; ignoring');
+  // console.warn('⚠️ Network change received before handshake; ignoring');
         return;
       }
       window.postMessage({
@@ -121,8 +121,8 @@ chrome.runtime.onMessage.addListener((message) => {
         token: trustedToken,
       }, '*');
     }
-  } catch (error) {
-    console.error('❌ Error handling background message:', error);
+  } catch (_error) {
+  // console.error('❌ Error handling background message:', _error);
   }
 });
 

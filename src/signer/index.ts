@@ -51,30 +51,30 @@ function decodeRevertReason(data?: string | null): string | null {
   return null;
 }
 
-console.log('🔐 Transaction signer loaded and ready');
+// console.log('🔐 Transaction signer loaded and ready');
 
 // Notify background that we're ready and wait for transaction
 window.addEventListener('load', async () => {
-  console.log('🔐 Signer window fully loaded, waiting for transaction...');
+  // console.log('🔐 Signer window fully loaded, waiting for transaction...');
   
   // Listen for transaction from background via storage
   const checkForTransaction = async () => {
     const result = await chrome.storage.local.get(['pendingSignerTransaction']);
     
     if (result.pendingSignerTransaction) {
-      console.log('📨 Received transaction to sign:', result.pendingSignerTransaction);
+  // console.log('📨 Received transaction to sign:', result.pendingSignerTransaction);
       const { transaction, privateKey, requestId } = result.pendingSignerTransaction;
       
       // Clear the pending transaction
       await chrome.storage.local.remove(['pendingSignerTransaction']);
       
       try {
-        console.log('🔐 Signing and sending transaction...');
+  // console.log('🔐 Signing and sending transaction...');
         
         // Try each RPC endpoint
         for (const rpcUrl of SEPOLIA_RPC_URLS) {
           try {
-            console.log(`📡 Trying RPC: ${rpcUrl}`);
+            // console.log(`📡 Trying RPC: ${rpcUrl}`);
             const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
             const wallet = new ethers.Wallet(privateKey, provider);
             
@@ -99,16 +99,16 @@ window.addEventListener('load', async () => {
               }
             }
             
-            console.log('📤 Sending transaction:', tx);
+            // console.log('📤 Sending transaction:', tx);
             const sentTx = await wallet.sendTransaction(tx);
-            console.log('✅ Transaction broadcasted!', sentTx.hash);
+            // console.log('✅ Transaction broadcasted!', sentTx.hash);
 
             let receipt;
             try {
               // Wait up to 60 seconds for the network to mine the tx
               receipt = await provider.waitForTransaction(sentTx.hash, 1, 60000);
-            } catch (waitError: any) {
-              console.warn('⌛ Transaction not yet confirmed:', waitError?.message || waitError);
+            } catch (_waitError: any) {
+              // console.warn('⌛ Transaction not yet confirmed:', _waitError?.message || _waitError);
             }
 
             if (!receipt) {
@@ -119,7 +119,7 @@ window.addEventListener('load', async () => {
                   pending: true,
                 }
               });
-              console.log('ℹ️ Transaction still pending, result stored.');
+              // console.log('ℹ️ Transaction still pending, result stored.');
               window.close();
               return;
             }
@@ -131,7 +131,7 @@ window.addEventListener('load', async () => {
                   hash: sentTx.hash,
                 }
               });
-              console.log('✅ Transaction mined successfully.');
+              // console.log('✅ Transaction mined successfully.');
               window.close();
               return;
             }
@@ -165,18 +165,18 @@ window.addEventListener('load', async () => {
                 error: revertMessage,
               }
             });
-            console.warn('❌ Transaction reverted:', revertMessage);
+            // console.warn('❌ Transaction reverted:', revertMessage);
             window.close();
             return;
-          } catch (error: any) {
-            console.warn(`❌ Failed with ${rpcUrl}:`, error.message);
+          } catch (_error: any) {
+            // console.warn(`❌ Failed with ${rpcUrl}:`, _error.message);
             // Try next endpoint
             continue;
           }
         }
         
         // All endpoints failed
-        console.error('❌ All RPC endpoints failed');
+  // console.error('❌ All RPC endpoints failed');
         await chrome.storage.local.set({
           [`signerResult_${requestId}`]: {
             success: false,
@@ -185,7 +185,7 @@ window.addEventListener('load', async () => {
         });
         window.close();
       } catch (error: any) {
-        console.error('❌ Transaction signing error:', error);
+  // console.error('❌ Transaction signing error:', error);
         await chrome.storage.local.set({
           [`signerResult_${requestId}`]: {
             success: false,
@@ -204,9 +204,9 @@ window.addEventListener('load', async () => {
   // Stop polling after 30 seconds
   setTimeout(() => {
     clearInterval(interval);
-    console.log('⏱️ Signer timeout after 30 seconds, closing...');
+  // console.log('⏱️ Signer timeout after 30 seconds, closing...');
     window.close();
   }, 30000);
 });
 
-console.log('✅ Transaction signer initialized');
+// console.log('✅ Transaction signer initialized');

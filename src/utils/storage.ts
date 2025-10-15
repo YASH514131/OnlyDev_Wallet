@@ -28,9 +28,9 @@ export async function storeInMemory(data: WalletData): Promise<void> {
       timestamp: Date.now(),
     };
     await chrome.storage.local.set({ [SESSION_KEY]: sessionData });
-    console.log('Session stored with timestamp:', sessionData.timestamp);
-  } catch (error) {
-    console.error('Failed to store in memory:', error);
+    // console.log('Session stored with timestamp:', sessionData.timestamp);
+  } catch (_error) {
+    // console.error('Failed to store in memory:', _error);
   }
 }
 
@@ -43,7 +43,7 @@ export async function getFromMemory(): Promise<WalletData | null> {
     const sessionData = result[SESSION_KEY] as SessionData | undefined;
     
     if (!sessionData) {
-      console.log('No session data found');
+      // console.log('No session data found');
       return null;
     }
     
@@ -52,15 +52,15 @@ export async function getFromMemory(): Promise<WalletData | null> {
     
     // Check if session has expired (15 minutes)
     if (elapsed > SESSION_DURATION) {
-      console.log('Session expired, clearing memory. Elapsed:', elapsed, 'ms');
+      // console.log('Session expired, clearing memory. Elapsed:', elapsed, 'ms');
       await clearMemory();
       return null;
     }
     
-    console.log('Session valid. Time remaining:', Math.floor((SESSION_DURATION - elapsed) / 1000), 'seconds');
+    // console.log('Session valid. Time remaining:', Math.floor((SESSION_DURATION - elapsed) / 1000), 'seconds');
     return sessionData.data;
-  } catch (error) {
-    console.error('Failed to get from memory:', error);
+  } catch (_error) {
+    // console.error('Failed to get from memory:', _error);
     return null;
   }
 }
@@ -79,7 +79,7 @@ export async function isSessionValid(): Promise<boolean> {
     const elapsed = now - sessionData.timestamp;
     
     return elapsed <= SESSION_DURATION;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -99,7 +99,7 @@ export async function getRemainingSessionTime(): Promise<number> {
     const remaining = SESSION_DURATION - elapsed;
     
     return remaining > 0 ? Math.floor(remaining / 1000) : 0;
-  } catch (error) {
+  } catch (_error) {
     return 0;
   }
 }
@@ -110,9 +110,9 @@ export async function getRemainingSessionTime(): Promise<number> {
 export async function clearMemory(): Promise<void> {
   try {
     await chrome.storage.local.remove([SESSION_KEY, SESSION_TIMEOUT_KEY]);
-    console.log('Session cleared');
-  } catch (error) {
-    console.error('Failed to clear memory:', error);
+    // console.log('Session cleared');
+  } catch (_error) {
+    // console.error('Failed to clear memory:', _error);
   }
 }
 
@@ -127,9 +127,9 @@ export async function refreshSession(): Promise<void> {
     if (!sessionData) return;
     
     await storeInMemory(sessionData.data); // This will update the timestamp
-    console.log('Session refreshed');
-  } catch (error) {
-    console.error('Failed to refresh session:', error);
+    // console.log('Session refreshed');
+  } catch (_error) {
+    // console.error('Failed to refresh session:', _error);
   }
 }
 
@@ -145,7 +145,7 @@ export async function storeEncrypted(data: WalletData, password: string): Promis
       [STORAGE_KEY]: encrypted,
       encrypted: true,
     });
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Failed to store encrypted data');
   }
 }
@@ -163,7 +163,7 @@ export async function getEncrypted(password: string): Promise<WalletData | null>
     
     const decrypted = await decrypt(result[STORAGE_KEY], password);
     return JSON.parse(decrypted);
-  } catch (error) {
+  } catch (_error) {
     throw new Error('Failed to decrypt data - incorrect password');
   }
 }
@@ -175,7 +175,7 @@ export async function hasEncryptedData(): Promise<boolean> {
   try {
     const result = await chrome.storage.local.get(['encrypted']);
     return result.encrypted === true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -187,8 +187,8 @@ export async function clearAllData(): Promise<void> {
   try {
     await chrome.storage.local.clear();
     clearMemory();
-  } catch (error) {
-    console.error('Failed to clear data:', error);
+  } catch (_error) {
+    // console.error('Failed to clear data:', _error);
   }
 }
 
@@ -198,8 +198,8 @@ export async function clearAllData(): Promise<void> {
 export async function storeSettings(settings: Record<string, any>): Promise<void> {
   try {
     await chrome.storage.local.set({ settings });
-  } catch (error) {
-    console.error('Failed to store settings:', error);
+  } catch (_error) {
+    // console.error('Failed to store settings:', _error);
   }
 }
 
@@ -210,8 +210,8 @@ export async function getSettings(): Promise<Record<string, any>> {
   try {
     const result = await chrome.storage.local.get(['settings']);
     return result.settings || {};
-  } catch (error) {
-    console.error('Failed to get settings:', error);
+  } catch (_error) {
+    // console.error('Failed to get settings:', _error);
     return {};
   }
 }

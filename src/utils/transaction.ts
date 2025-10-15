@@ -17,7 +17,7 @@ export async function signAndSendTransaction(
     // Try each RPC endpoint
     for (const rpcUrl of SEPOLIA_RPC_URLS) {
       try {
-        console.log(`🔄 Attempting to send transaction via ${rpcUrl}`);
+  // console.log(`🔄 Attempting to send transaction via ${rpcUrl}`);
         
         const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
         const wallet = new ethers.Wallet(privateKey, provider);
@@ -43,13 +43,13 @@ export async function signAndSendTransaction(
         }
         
         // Send transaction
-        console.log('📤 Sending transaction:', tx);
+  // console.log('📤 Sending transaction:', tx);
         const sentTx = await wallet.sendTransaction(tx);
-        console.log('✅ Transaction sent:', sentTx.hash);
+  // console.log('✅ Transaction sent:', sentTx.hash);
         
         return sentTx.hash;
-      } catch (error: any) {
-        console.warn(`⚠️ Failed to send via ${rpcUrl}:`, error.message);
+      } catch (_error: any) {
+        // console.warn(`⚠️ Failed to send via ${rpcUrl}:`, _error.message);
         // Try next RPC
         continue;
       }
@@ -57,7 +57,7 @@ export async function signAndSendTransaction(
     
     throw new Error('All RPC endpoints failed to send transaction');
   } catch (error: any) {
-    console.error('❌ Failed to sign and send transaction:', error);
+    // console.error('❌ Failed to sign and send transaction:', error);
     throw error;
   }
 }
@@ -71,8 +71,8 @@ export async function estimateGas(transaction: any): Promise<string> {
       const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
       const gasEstimate = await provider.estimateGas(transaction);
       return gasEstimate.toHexString();
-    } catch (error) {
-      console.warn(`Failed to estimate gas via ${rpcUrl}`);
+    } catch (_error) {
+      // console.warn(`Failed to estimate gas via ${rpcUrl}`);
       continue;
     }
   }

@@ -31,8 +31,8 @@ const Popup: React.FC = () => {
     if (wallet) {
       const handleInteraction = async () => {
         await refreshSession();
-        const remaining = await getRemainingSessionTime();
-        console.log('Session refreshed. Time remaining:', remaining, 'seconds');
+        await getRemainingSessionTime();
+        // console.log('Session refreshed. Time remaining:', remaining, 'seconds');
       };
 
       // Refresh on mouse move, click, or keypress
@@ -43,11 +43,11 @@ const Popup: React.FC = () => {
       // Check session expiry every minute
       const interval = setInterval(async () => {
         const remaining = await getRemainingSessionTime();
-        console.log('Session check. Time remaining:', remaining, 'seconds');
+        // console.log('Session check. Time remaining:', remaining, 'seconds');
         
         if (remaining <= 0) {
           // Session expired, lock wallet
-          console.log('Session expired! Locking wallet...');
+          // console.log('Session expired! Locking wallet...');
           setWallet(null);
           setView('create');
           await clearMemory();
@@ -70,7 +70,7 @@ const Popup: React.FC = () => {
       // Check if wallet exists in memory (session)
       const memoryData = await getFromMemory();
       if (memoryData && memoryData.evmPrivateKey) {
-        console.log('Session found! Restoring wallet...');
+  // console.log('Session found! Restoring wallet...');
         setWallet({
           evmAddress: memoryData.evmPrivateKey ? await getAddressFromKey(memoryData.evmPrivateKey) : '',
           evmPrivateKey: memoryData.evmPrivateKey,
@@ -84,7 +84,7 @@ const Popup: React.FC = () => {
         return;
       }
       
-      console.log('No active session found');
+  // console.log('No active session found');
       
       // Check if encrypted wallet exists
       const hasEncrypted = await hasEncryptedData();
@@ -99,8 +99,8 @@ const Popup: React.FC = () => {
       }
       
       setLoading(false);
-    } catch (error) {
-      console.error('Failed to initialize wallet:', error);
+    } catch (_error) {
+      // console.error('Failed to initialize wallet:', _error);
       setLoading(false);
     }
   };
@@ -162,8 +162,8 @@ const Popup: React.FC = () => {
       } else {
         setView('wallet');
       }
-    } catch (error) {
-      console.error('Failed to create wallet:', error);
+    } catch (_error) {
+      // console.error('Failed to create wallet:', _error);
       alert('Failed to create wallet. Please try again.');
     }
   };
@@ -208,30 +208,30 @@ const Popup: React.FC = () => {
       
       setWallet(unlockedWallet);
       setView('wallet');
-    } catch (error) {
-      console.error('Failed to unlock wallet:', error);
+    } catch (_error) {
+      // console.error('Failed to unlock wallet:', _error);
       alert('Failed to unlock wallet. Incorrect password.');
     }
   };
 
   const handleImportWallet = async (evmKey: string, solanaKey: string, password: string) => {
     try {
-      console.log('🔄 Starting wallet import...');
+      // console.log('🔄 Starting wallet import...');
       
       let evmWallet;
       // Check if it's a mnemonic or private key
       if (evmKey.includes(' ')) {
-        console.log('📝 Importing from mnemonic...');
+       // console.log('📝 Importing from mnemonic...');
         evmWallet = importFromMnemonic(evmKey);
       } else {
-        console.log('🔑 Importing from private key...');
+       // console.log('🔑 Importing from private key...');
         evmWallet = importFromPrivateKey(evmKey);
       }
       
-      console.log('✅ EVM wallet imported:', evmWallet.address);
-      console.log('🔄 Importing Solana wallet...');
+  // console.log('✅ EVM wallet imported:', evmWallet.address);
+  // console.log('🔄 Importing Solana wallet...');
       const solanaWallet = importFromSecretKey(solanaKey);
-      console.log('✅ Solana wallet imported:', solanaWallet.publicKey);
+      // console.log('✅ Solana wallet imported:', solanaWallet.publicKey);
       
       const newWallet: WalletState = {
         evmAddress: evmWallet.address,
@@ -249,16 +249,16 @@ const Popup: React.FC = () => {
         selectedNetwork: 'sepolia',
       };
       
-      console.log('💾 Storing encrypted wallet...');
+  // console.log('💾 Storing encrypted wallet...');
       // Store encrypted
       const { storeEncrypted } = await import('../utils/storage');
       await storeEncrypted(walletData, password);
       
-      console.log('💾 Storing in memory...');
+  // console.log('💾 Storing in memory...');
       // Store in memory
       storeInMemory(walletData);
       
-      console.log('💾 Storing wallet state...');
+  // console.log('💾 Storing wallet state...');
       // Store walletState for background script access
       await chrome.storage.local.set({ 
         walletState: {
@@ -267,12 +267,12 @@ const Popup: React.FC = () => {
         }
       });
       
-      console.log('✅ Wallet import complete!');
+      // console.log('✅ Wallet import complete!');
       setWallet(newWallet);
       setView('wallet');
     } catch (error: any) {
-      console.error('❌ Failed to import wallet:', error);
-      console.error('Error details:', error.message, error.stack);
+      // console.error('❌ Failed to import wallet:', error);
+      // console.error('Error details:', error.message, error.stack);
       alert(`Failed to import wallet: ${error.message}\n\nPlease check the console for details.`);
     }
   };

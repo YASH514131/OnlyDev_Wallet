@@ -13,15 +13,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
   const [encryptPassword, setEncryptPassword] = useState('');
   const [showEncrypt, setShowEncrypt] = useState(false);
 
-  console.log('SettingsView rendered', { wallet, showKeys });
+  // console.log('SettingsView rendered', { wallet, showKeys });
 
   const handleExportKeys = () => {
-    console.log('handleExportKeys clicked', showKeys);
+  // console.log('handleExportKeys clicked', showKeys);
     if (!showKeys) {
       const confirmed = confirm(
         '⚠️ WARNING: Only export testnet keys!\n\nNever share these keys or use them on mainnet.\n\nDo you want to continue?'
       );
-      console.log('User confirmed:', confirmed);
+  // console.log('User confirmed:', confirmed);
       if (!confirmed) return;
       setShowKeys(true);
     } else {
@@ -47,7 +47,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
       alert('✓ Wallet encrypted and saved successfully!');
       setShowEncrypt(false);
       setEncryptPassword('');
-    } catch (error) {
+    } catch (_error) {
       alert('Failed to encrypt wallet. Please try again.');
     }
   };
@@ -60,6 +60,39 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
     if (confirmed) {
       clearAllData();
       onClearWallet();
+    }
+  };
+
+  const handleDownloadSolanaKeypair = () => {
+    const confirmed = confirm(
+      '⚠️ TESTNET ONLY\n\nThis will download your Solana secret key as a JSON file. Keep it safe and never upload it to mainnet tools. Continue?'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const keypairArray = Array.from(wallet.solanaSecretKey || []);
+
+      if (!keypairArray.length) {
+        alert('Solana secret key not found. Please re-open the wallet.');
+        return;
+      }
+
+      const contents = JSON.stringify(keypairArray, null, 2);
+      const blob = new Blob([contents], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = 'solana-wallet-keypair.json';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(url);
+
+      alert('Solana keypair downloaded (solana-wallet-keypair.json)');
+    } catch (_error) {
+  // console.error('Failed to export Solana keypair', _error);
+      alert('Failed to download Solana keypair. Please try again.');
     }
   };
 
@@ -187,6 +220,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
                 rows={4}
               />
             </div>
+
+            <button
+              onClick={handleDownloadSolanaKeypair}
+              className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-all"
+            >
+              Download Solana Keypair (.json)
+            </button>
           </div>
         )}
       </div>

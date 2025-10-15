@@ -5,12 +5,12 @@ import { NetworkConfig } from './network';
  */
 export function openFaucet(faucetUrl?: string): void {
   if (!faucetUrl) {
-    console.warn('No faucet URL available for this network');
+    // console.warn('No faucet URL available for this network');
     return;
   }
   
   if (faucetUrl === 'local') {
-    console.log('Local faucet - use built-in funding');
+    // console.log('Local faucet - use built-in funding');
     return;
   }
   
@@ -41,8 +41,8 @@ export async function requestLocalFaucet(
     
     const data = await response.json();
     return !data.error;
-  } catch (error) {
-    console.error('Local faucet request failed:', error);
+  } catch (_error) {
+    // console.error('Local faucet request failed:', _error);
     return false;
   }
 }

@@ -198,6 +198,8 @@ const { signature } = await window.solanaTestnetWallet.signAndSendTransaction(tr
 
 ## 🛡️ Security Model
 
+- ✅ **Handshake-authenticated messaging bridge** between dApp, content script, and service worker
+- ✅ **Strict RPC input validation** before forwarding any call to external providers
 - ✅ **Block `chainId 1` and `mainnet-beta`**
 - ✅ Keys never leave local context
 - ✅ All RPC calls HTTPS or localhost
@@ -335,24 +337,19 @@ See [contracts/README.md](./contracts/README.md) for detailed instructions.
 
 ### Generate Solana Keypair (JSON Format)
 
-To deploy Solana programs, you need your wallet's keypair in JSON array format:
+From the extension UI:
+
+1. Open the wallet popup → **Settings**.
+2. Under **Export Keys**, click **Show Private Keys**.
+3. Press **Download Solana Keypair (.json)**.
+
+The browser downloads `solana-wallet-keypair.json` containing the Uint8Array representation that Solana CLI, Solana Playground, and other tools expect.
+
+Prefer the command line? You can still run:
 
 ```bash
-# Get your Solana private key from wallet Settings
 node scripts/generate-keypair.js YOUR_BASE64_SECRET_KEY
 ```
-
-This creates `wallet-keypair.json` which you can:
-- Upload to [Solana Playground](https://beta.solpg.io/) for deploying programs
-- Use with Solana CLI commands
-- Import into other Solana development tools
-
-**Example:**
-```bash
-node scripts/generate-keypair.js lvaNRhIRQ8YUwc6vAiY0ySyFWjfN3vE2ON380fBrYrkcqw+lZ8OiasxZ74E8xqkycGPJVL3WDPkydN2M/tasrg==
-```
-
-Output: `[150,246,141,70,18,17,43,198,...]` saved to `wallet-keypair.json`
 
 📖 See [docs/SOLANA_DEPLOY_GUIDE.md](docs/SOLANA_DEPLOY_GUIDE.md) for full deployment guide.
 
