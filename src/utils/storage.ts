@@ -11,7 +11,7 @@ export interface WalletData {
 const STORAGE_KEY = 'testnet_wallet_data';
 const SESSION_KEY = 'testnet_wallet_session';
 const SESSION_TIMEOUT_KEY = 'testnet_wallet_session_timeout';
-const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+const SESSION_DURATION = 60 * 60 * 1000; // 60 minutes in milliseconds
 
 interface SessionData {
   data: WalletData;

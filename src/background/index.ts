@@ -244,7 +244,7 @@ async function handleApproveTransaction(tabId: number, transaction: any) {
       const result = await chrome.storage.local.get([SESSION_KEY]);
       const sessionData = result[SESSION_KEY];
       
-      if (!sessionData || !sessionData.evmPrivateKey) {
+      if (!sessionData || !sessionData.data || !sessionData.data.evmPrivateKey) {
         throw new Error('Wallet is locked. Please unlock your wallet.');
       }
       
@@ -261,12 +261,12 @@ async function handleApproveTransaction(tabId: number, transaction: any) {
       await chrome.storage.local.set({
         pendingSignerTransaction: {
           transaction,
-          privateKey: sessionData.evmPrivateKey,
+          privateKey: sessionData.data.evmPrivateKey,
           requestId,
         }
       });
       
-      // Open signer in background
+      // Open signer in background (hidden for performance)
       const signerWindow = await chrome.windows.create({
         url: signerUrl,
         type: 'popup',
@@ -281,7 +281,7 @@ async function handleApproveTransaction(tabId: number, transaction: any) {
       
       // Poll for result
       const pollForResult = async (): Promise<any> => {
-        for (let i = 0; i < 100; i++) { // Poll for up to 10 seconds
+        for (let i = 0; i < 300; i++) { // Poll for up to 30 seconds
           await new Promise(resolve => setTimeout(resolve, 100));
           
           const result = await chrome.storage.local.get([`signerResult_${requestId}`]);
@@ -291,7 +291,7 @@ async function handleApproveTransaction(tabId: number, transaction: any) {
             return result[`signerResult_${requestId}`];
           }
         }
-        throw new Error('Signer timeout');
+        throw new Error('Signer timeout after 30 seconds');
       };
       
       try {
@@ -313,12 +313,14 @@ async function handleApproveTransaction(tabId: number, transaction: any) {
           sendResponse({
             success: true,
             hash: response.hash,
+            pending: response.pending || false,
           });
         } else {
           console.error('❌ Transaction failed:', response?.error);
           sendResponse({
             success: false,
             error: response?.error || 'Transaction failed',
+            hash: response?.hash,
           });
         }
       } catch (error: any) {

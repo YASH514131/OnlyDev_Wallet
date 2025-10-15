@@ -60,11 +60,13 @@ export default defineConfig({
         popup: resolve(__dirname, 'index.html'),
         background: resolve(__dirname, 'src/background/index.ts'),
         content: resolve(__dirname, 'src/content/inject.ts'),
+        signer: resolve(__dirname, 'src/signer/index.ts'),
       },
       output: {
         entryFileNames: (chunkInfo: any) => {
           if (chunkInfo.name === 'background') return 'background.js';
           if (chunkInfo.name === 'content') return 'content.js';
+          if (chunkInfo.name === 'signer') return 'signer.js';
           return 'assets/[name]-[hash].js';
         },
         chunkFileNames: 'assets/[name]-[hash].js',

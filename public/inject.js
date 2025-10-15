@@ -72,21 +72,34 @@
       'https://rpc.sepolia.org',
       'https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161', // Public Infura key
     ];
-    
-    for (const RPC_URL of RPC_URLS) {
+
+    const fetchWithTimeout = async (url, body, timeoutMs = 8000) => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const response = await fetch(RPC_URL, {
+        return await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: Date.now(),
-            method,
-            params,
-          }),
+          body,
+          signal: controller.signal,
         });
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+    
+    const requestBody = JSON.stringify({
+      jsonrpc: '2.0',
+      id: Date.now(),
+      method,
+      params,
+    });
+    
+    for (const RPC_URL of RPC_URLS) {
+      try {
+        const response = await fetchWithTimeout(RPC_URL, requestBody);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -103,7 +116,9 @@
         console.log('🟢 RPC response for', method, ':', data.result);
         return data.result;
       } catch (error) {
-        console.warn('⚠️ RPC endpoint failed:', RPC_URL, error.message);
+        const message = error?.message || error?.name || 'Unknown error';
+        const isAbort = error?.name === 'AbortError';
+        console.warn(`⚠️ RPC endpoint failed: ${RPC_URL} (${isAbort ? 'timeout' : message})`);
         // Try next endpoint
         continue;
       }
@@ -167,13 +182,25 @@
         case 'eth_getBalance':
         case 'eth_blockNumber':
         case 'eth_getBlockByNumber':
+        case 'eth_getBlockByHash':
         case 'eth_getTransactionCount':
         case 'eth_getTransactionReceipt':
+        case 'eth_getTransactionByHash':
+        case 'eth_getTransactionByBlockHashAndIndex':
+        case 'eth_getTransactionByBlockNumberAndIndex':
+        case 'eth_getBlockTransactionCountByHash':
+        case 'eth_getBlockTransactionCountByNumber':
+        case 'eth_getUncleCountByBlockHash':
+        case 'eth_getUncleCountByBlockNumber':
         case 'eth_call':
         case 'eth_estimateGas':
         case 'eth_gasPrice':
+        case 'eth_maxPriorityFeePerGas':
+        case 'eth_feeHistory':
+        case 'eth_syncing':
         case 'eth_getCode':
         case 'eth_getLogs':
+        case 'web3_clientVersion':
           // Forward these to Sepolia RPC
           return await forwardToRPC(method, params);
           
