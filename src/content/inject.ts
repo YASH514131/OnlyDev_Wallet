@@ -3,6 +3,8 @@
  * Provides window.testnetWallet (EVM) and window.solanaTestnetWallet (Solana)
  */
 
+let trustedToken: string | null = null;
+
 // Inject ASAP to beat other wallets
 function injectScript() {
   try {
@@ -31,10 +33,31 @@ injectScript();
 window.addEventListener('message', async (event) => {
   // Only accept messages from same window
   if (event.source !== window) return;
+
+  const payload = event.data;
+  if (!payload || typeof payload !== 'object') {
+    return;
+  }
+
+  if (payload.type === 'TESTNET_WALLET_HANDSHAKE') {
+    if (typeof payload.token === 'string' && payload.token.length <= 256) {
+      trustedToken = payload.token;
+      window.postMessage({
+        type: 'TESTNET_WALLET_HANDSHAKE',
+        acknowledged: true,
+        token: trustedToken,
+      }, '*');
+    }
+    return;
+  }
+
+  if (!trustedToken || payload.token !== trustedToken) {
+    return;
+  }
   
   // Ignore our own response messages to prevent infinite loop
-  if (event.data.type && event.data.type.startsWith('TESTNET_WALLET_') && !event.data.type.endsWith('_RESPONSE')) {
-    console.log('📤 Content script received:', event.data.type);
+  if (payload.type && payload.type.startsWith('TESTNET_WALLET_') && !payload.type.endsWith('_RESPONSE')) {
+    console.log('📤 Content script received:', payload.type);
     
     try {
       // Check if extension context is valid
@@ -44,8 +67,8 @@ window.addEventListener('message', async (event) => {
       
       // Forward to background script
       const backgroundRequest = {
-        type: event.data.type.replace('TESTNET_WALLET_', ''),
-        data: event.data.data,
+        type: payload.type.replace('TESTNET_WALLET_', ''),
+        data: payload.data,
       };
       console.log('📤 Forwarding to background:', backgroundRequest);
       
@@ -54,9 +77,10 @@ window.addEventListener('message', async (event) => {
       
       // Send response back to page
       window.postMessage({
-        type: event.data.type + '_RESPONSE',
-        id: event.data.id,
+        type: payload.type + '_RESPONSE',
+        id: payload.id,
         response,
+        token: trustedToken,
       }, '*');
       console.log('✅ Response sent to page');
     } catch (error: any) {
@@ -69,9 +93,10 @@ window.addEventListener('message', async (event) => {
       }
       
       window.postMessage({
-        type: event.data.type + '_RESPONSE',
-        id: event.data.id,
+        type: payload.type + '_RESPONSE',
+        id: payload.id,
         response: { success: false, error: errorMessage },
+        token: trustedToken,
       }, '*');
     }
   }
@@ -86,9 +111,14 @@ chrome.runtime.onMessage.addListener((message) => {
     }
     
     if (message.type === 'NETWORK_CHANGED') {
+      if (!trustedToken) {
+        console.warn('⚠️ Network change received before handshake; ignoring');
+        return;
+      }
       window.postMessage({
         type: 'TESTNET_WALLET_NETWORK_CHANGED',
         network: message.network,
+        token: trustedToken,
       }, '*');
     }
   } catch (error) {

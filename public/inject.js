@@ -7,6 +7,84 @@
 (function() {
   'use strict';
   
+  const HANDSHAKE_EVENT = 'TESTNET_WALLET_HANDSHAKE';
+  let handshakeAcknowledged = false;
+  const HANDSHAKE_TOKEN = (() => {
+    try {
+      const buffer = new Uint32Array(4);
+      window.crypto.getRandomValues(buffer);
+      return Array.from(buffer).map(n => n.toString(16).padStart(8, '0')).join('-');
+    } catch (error) {
+      console.warn('⚠️ Failed to generate cryptographic token, falling back to Date.now()', error);
+      return `fallback-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+  })();
+  
+  const HEX_REGEX = /^0x[0-9a-fA-F]*$/;
+  const ADDRESS_REGEX = /^0x[0-9a-fA-F]{40}$/;
+  const HASH_REGEX = /^0x[0-9a-fA-F]{64}$/;
+  const QUANTITY_REGEX = /^0x[0-9a-fA-F]{1,64}$/;
+  const BLOCK_TAGS = new Set(['latest', 'earliest', 'pending', 'safe', 'finalized']);
+  
+  const isHexString = (value, evenLength = true) => {
+    if (typeof value !== 'string' || !HEX_REGEX.test(value)) {
+      return false;
+    }
+    return evenLength ? (value.length % 2 === 0) : true;
+  };
+  
+  const isAddress = (value) => typeof value === 'string' && ADDRESS_REGEX.test(value);
+  const isHash = (value) => typeof value === 'string' && HASH_REGEX.test(value);
+  const isQuantity = (value) => typeof value === 'string' && QUANTITY_REGEX.test(value);
+  const isData = (value) => isHexString(value, false);
+  const isBlockTag = (value) => typeof value === 'string' && (BLOCK_TAGS.has(value) || isQuantity(value));
+  
+  const RPC_VALIDATORS = {
+    eth_getBalance: (params) => Array.isArray(params) && params.length >= 1 && params.length <= 2 && isAddress(params[0]) && (params.length === 1 || isBlockTag(params[1])),
+    eth_getTransactionCount: (params) => Array.isArray(params) && params.length === 2 && isAddress(params[0]) && isBlockTag(params[1]),
+    eth_getCode: (params) => Array.isArray(params) && params.length >= 1 && params.length <= 2 && isAddress(params[0]) && (params.length === 1 || isBlockTag(params[1])),
+    eth_call: (params) => Array.isArray(params) && params.length >= 1 && params.length <= 2 && typeof params[0] === 'object' && params[0] !== null && (!params[0].to || isAddress(params[0].to)) && (!params[0].data || isData(params[0].data)) && (params.length === 1 || isBlockTag(params[1])),
+    eth_estimateGas: (params) => Array.isArray(params) && params.length >= 1 && params.length <= 2 && typeof params[0] === 'object' && params[0] !== null,
+  eth_getTransactionReceipt: (params) => Array.isArray(params) && params.length === 1 && isHash(params[0]),
+  eth_getTransactionByHash: (params) => Array.isArray(params) && params.length === 1 && isHash(params[0]),
+  eth_getBlockByHash: (params) => Array.isArray(params) && params.length === 2 && isHash(params[0]) && typeof params[1] === 'boolean',
+    eth_getBlockByNumber: (params) => Array.isArray(params) && params.length === 2 && isBlockTag(params[0]) && typeof params[1] === 'boolean',
+  eth_getTransactionByBlockHashAndIndex: (params) => Array.isArray(params) && params.length === 2 && isHash(params[0]) && isQuantity(params[1]),
+    eth_getTransactionByBlockNumberAndIndex: (params) => Array.isArray(params) && params.length === 2 && isBlockTag(params[0]) && isQuantity(params[1]),
+  eth_getBlockTransactionCountByHash: (params) => Array.isArray(params) && params.length === 1 && isHash(params[0]),
+    eth_getBlockTransactionCountByNumber: (params) => Array.isArray(params) && params.length === 1 && isBlockTag(params[0]),
+  eth_getUncleCountByBlockHash: (params) => Array.isArray(params) && params.length === 1 && isHash(params[0]),
+    eth_getUncleCountByBlockNumber: (params) => Array.isArray(params) && params.length === 1 && isBlockTag(params[0]),
+    eth_gasPrice: (params) => Array.isArray(params) && params.length === 0,
+    eth_maxPriorityFeePerGas: (params) => Array.isArray(params) && params.length === 0,
+  eth_feeHistory: (params) => Array.isArray(params) && params.length === 3 && isQuantity(params[0]) && isBlockTag(params[1]) && Array.isArray(params[2]),
+    eth_getLogs: (params) => Array.isArray(params) && params.length === 1 && typeof params[0] === 'object' && params[0] !== null,
+    eth_blockNumber: (params) => Array.isArray(params) && params.length === 0,
+    net_version: (params) => Array.isArray(params) && params.length === 0,
+    web3_clientVersion: (params) => Array.isArray(params) && params.length === 0,
+  };
+  
+  const validateRpcParams = (method, params) => {
+    const validator = RPC_VALIDATORS[method];
+    if (!validator) {
+      return;
+    }
+    const safeParams = Array.isArray(params) ? params : [];
+    if (!validator(safeParams)) {
+      throw new Error(`Invalid parameters for ${method}`);
+    }
+  };
+  
+  // Establish handshake with the content script so only trusted messages are processed
+  try {
+    window.postMessage({
+      type: HANDSHAKE_EVENT,
+      token: HANDSHAKE_TOKEN,
+    }, '*');
+  } catch (handshakeError) {
+    console.error('❌ Failed to send handshake message:', handshakeError);
+  }
+  
   // Immediately block Phantom from taking over ethereum
   if (window.ethereum && window.ethereum.isPhantom) {
     console.log('🧩 Phantom detected, overriding with TestNet Wallet');
@@ -22,11 +100,15 @@
     return new Promise((resolve, reject) => {
       const id = ++requestId;
       pendingRequests.set(id, { resolve, reject });
+      if (!handshakeAcknowledged) {
+        console.debug('⌛ Handshake not yet acknowledged; proceeding cautiously');
+      }
       
       window.postMessage({
         type: `TESTNET_WALLET_${type}`,
         id,
         data,
+        token: HANDSHAKE_TOKEN,
       }, '*');
       
       // Timeout after 30 seconds
@@ -42,9 +124,26 @@
   // Listen for responses
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
+    const message = event.data;
+    if (!message || typeof message !== 'object') {
+      return;
+    }
     
-    if (event.data.type && event.data.type.endsWith('_RESPONSE')) {
-      const { id, response } = event.data;
+    if (message.type === HANDSHAKE_EVENT) {
+      if (message.acknowledged) {
+        handshakeAcknowledged = true;
+        console.log('🤝 Handshake acknowledged by content script');
+      }
+      return;
+    }
+    
+    if (message.token !== HANDSHAKE_TOKEN) {
+      // Ignore messages without the trusted token
+      return;
+    }
+
+    if (message.type && message.type.endsWith('_RESPONSE')) {
+        const { id, response } = message;
       const pending = pendingRequests.get(id);
       
       if (pending) {
@@ -58,7 +157,7 @@
     }
     
     // Handle network changes
-    if (event.data.type === 'TESTNET_WALLET_NETWORK_CHANGED') {
+      if (message.type === 'TESTNET_WALLET_NETWORK_CHANGED') {
       testnetWallet.emit('chainChanged', event.data.network);
     }
   });
@@ -66,6 +165,7 @@
   // Helper function to forward RPC calls to public Sepolia endpoint
   async function forwardToRPC(method, params) {
     // Try multiple RPC endpoints for better reliability
+    validateRpcParams(method, params);
     const RPC_URLS = [
       'https://sepolia.gateway.tenderly.co',
       'https://ethereum-sepolia.publicnode.com',
