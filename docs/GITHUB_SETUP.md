@@ -156,13 +156,13 @@ You still need to create the icon files. Use either:
 
 **Option A**: Run PowerShell script
 ```powershell
-.\create-icons.ps1
+.\scripts\make-icons.ps1
 ```
 
-**Option B**: Use HTML generator
-- Open `generate-icons.html` in browser
-- Download all three icons
-- Save to `build\icons\` folder
+**Option B**: Use HTML generator (archived)
+- See `archive/generate-icons.html` for legacy method
+- Current method uses `scripts/make-icons.ps1`
+- Icons saved to `build/icons/` folder
 
 ### 2. Complete Build
 ```powershell
@@ -196,11 +196,10 @@ Your repository now includes:
 
 ## 📖 Documentation Links
 
-- **Main Docs**: [README.md](README.md)
-- **API Guide**: [API.md](API.md)
-- **Quick Start**: [QUICKSTART.md](QUICKSTART.md)
-- **Git Guide**: [GIT_GUIDE.md](GIT_GUIDE.md)
-- **Build Guide**: [BUILD.md](BUILD.md)
+- **Main Docs**: [README.md](../Readme.md)
+- **API Guide**: [API.md](../API.md)
+- **Quick Start**: [QUICKSTART.md](./QUICKSTART.md)
+- **Build Guide**: [BUILD.md](./BUILD.md)
 
 ---
 

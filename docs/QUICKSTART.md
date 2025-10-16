@@ -232,8 +232,8 @@ npm install
 
 ## 📖 Next Steps
 
-- Read [API.md](./API.md) for complete API documentation
-- Check [README.md](./README.md) for detailed project information
+- Read [API.md](../API.md) for complete API documentation
+- Check [README.md](../Readme.md) for detailed project information
 - See [BUILD.md](./BUILD.md) for advanced build options
 
 ## 🎓 Learning Resources

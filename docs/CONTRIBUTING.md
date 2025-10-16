@@ -246,8 +246,8 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## ❓ Questions?
 
 If you have questions:
-1. Check the [README.md](./README.md)
-2. Review [API.md](./API.md)
+1. Check the [README.md](../Readme.md)
+2. Review [API.md](../API.md)
 3. Look at [QUICKSTART.md](./QUICKSTART.md)
 4. Open a GitHub issue
 

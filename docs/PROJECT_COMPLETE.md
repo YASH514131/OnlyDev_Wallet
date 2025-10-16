@@ -299,12 +299,12 @@ Consider adding:
 
 ### For Users
 - [QUICKSTART.md](./QUICKSTART.md) - Get started in 5 minutes
-- [API.md](./API.md) - API documentation and examples
+- [API.md](../API.md) - API documentation and examples
 
 ### For Developers
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - How to contribute
 - [BUILD.md](./BUILD.md) - Advanced build options
-- [README.md](./README.md) - Complete project documentation
+- [README.md](../Readme.md) - Complete project documentation
 
 ---
 

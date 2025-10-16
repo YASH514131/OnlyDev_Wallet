@@ -7,3 +7,4 @@ dist/
 .vscode/
 *.crx
 *.pem
+archive/
