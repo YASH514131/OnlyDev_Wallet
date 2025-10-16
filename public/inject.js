@@ -442,150 +442,45 @@
     configurable: false,
   });
   
-  // Force inject as window.ethereum for Remix compatibility while guarding against overrides
-  // Store existing ethereum provider if present
-  const existingProvider = window.ethereum;
-  const observedProviders = new Set();
+  // SIMPLE APPROACH: inject ethereum as non-writable, non-configurable value
+  // This makes it impossible for Phantom or any other code to change it
+  const ourDevnetWallet = devnetWallet;
+  
+  // Create provider registry for external wallets
+  if (!Array.isArray(devnetWallet.providers)) {
+    devnetWallet.providers = [];
+  }
+  devnetWallet.providers.push(devnetWallet);
 
-  const ensureProviderRegistry = () => {
-    if (!Array.isArray(devnetWallet.providers)) {
-      devnetWallet.providers = [];
-    }
-    if (!devnetWallet.providers.includes(devnetWallet)) {
-      devnetWallet.providers.unshift(devnetWallet);
-    }
-  };
+  // Capture any existing provider (Phantom, MetaMask, etc.)
+  const capturedEthereumProvider = window.ethereum;
+  if (capturedEthereumProvider && !capturedEthereumProvider.isDevnetWallet) {
+    devnetWallet.providers.push(capturedEthereumProvider);
+    window.phantomEthereum = capturedEthereumProvider;
+  }
 
-  const registerExternalProvider = (provider) => {
-    if (!provider || provider === devnetWallet || observedProviders.has(provider)) {
-      return;
-    }
-    observedProviders.add(provider);
-    ensureProviderRegistry();
-    if (!devnetWallet.providers.includes(provider)) {
-      devnetWallet.providers.push(provider);
-    }
-    if (!window.phantomEthereum) {
-      window.phantomEthereum = provider;
-    }
-    console.log('🔁 Captured external ethereum provider', provider?.isPhantom ? '(Phantom)' : '');
-  };
-
-  const originalDefineProperty = Object.defineProperty;
-  const originalDefineProperties = Object.defineProperties;
-  const originalReflectDefineProperty = Reflect.defineProperty;
-
-  const applyDevnetDescriptor = () => {
-    try {
-      originalDefineProperty(window, 'ethereum', {
-        configurable: false,
-        enumerable: true,
-        get() {
-          return devnetWallet;
-        },
-        set(provider) {
-          registerExternalProvider(provider);
-        },
-      });
-    } catch (error) {
-      console.warn('⚠️ Failed to lock ethereum descriptor', error);
-    }
-  };
-
+  // Attempt to remove any existing ethereum
   try {
     delete window.ethereum;
   } catch (_error) {
-    // ignore if already non-configurable
+    // ignore if non-configurable
   }
 
-  applyDevnetDescriptor();
+  // Lock ethereum as our DevNet wallet - immutable
+  Object.defineProperty(window, 'ethereum', {
+    value: ourDevnetWallet,
+    writable: false,
+    configurable: false,
+    enumerable: true
+  });
 
-  Object.defineProperty = function(target, property, descriptor) {
-    if (target === window && property === 'ethereum') {
-      if (descriptor) {
-        if ('value' in descriptor && descriptor.value) {
-          registerExternalProvider(descriptor.value);
-        }
-        if (descriptor.get) {
-          try {
-            registerExternalProvider(descriptor.get());
-          } catch (_error) {
-            // getter may require context; ignore
-          }
-        }
-      }
-      applyDevnetDescriptor();
-      return target;
-    }
-    return originalDefineProperty(target, property, descriptor);
-  };
-
-  Object.defineProperties = function(target, descriptors) {
-    if (target === window && descriptors && descriptors.ethereum) {
-      const desc = descriptors.ethereum;
-      if (desc) {
-        if ('value' in desc && desc.value) {
-          registerExternalProvider(desc.value);
-        }
-        if (desc.get) {
-          try {
-            registerExternalProvider(desc.get());
-          } catch (_error) {
-            // ignore getter side effects
-          }
-        }
-      }
-      applyDevnetDescriptor();
-      const { ethereum, ...rest } = descriptors;
-      return originalDefineProperties(target, rest);
-    }
-    return originalDefineProperties(target, descriptors);
-  };
-
-  Reflect.defineProperty = function(target, property, descriptor) {
-    if (target === window && property === 'ethereum') {
-      if (descriptor) {
-        if ('value' in descriptor && descriptor.value) {
-          registerExternalProvider(descriptor.value);
-        }
-        if (descriptor.get) {
-          try {
-            registerExternalProvider(descriptor.get());
-          } catch (_error) {
-            // ignore getter evaluation issues
-          }
-        }
-      }
-      applyDevnetDescriptor();
-      return true;
-    }
-    return originalReflectDefineProperty(target, property, descriptor);
-  };
-
-  // Seed registry with previously existing provider (e.g., Phantom)
-  if (existingProvider) {
-    registerExternalProvider(existingProvider);
-  }
-
-  ensureProviderRegistry();
-
-  // Also hide Phantom's specific properties to avoid double injection UIs
-  if (window.phantom) {
-    window.phantomBackup = window.phantom;
+  // Backup Phantom's wallet if available (keep it accessible via window.phantomEthereum)
+  // We don't try to hide it—just keep our ethereum locked as immutable
+  if (window.phantom && !window.phantomEthereum) {
     try {
-      delete window.phantom;
+      window.phantomEthereum = window.phantom;
     } catch (_error) {
-      // Some providers expose non-configurable properties; keep reference instead
-      Object.defineProperty(window, 'phantom', {
-        configurable: false,
-        enumerable: false,
-        get() {
-          return undefined;
-        },
-        set(provider) {
-          registerExternalProvider(provider);
-        },
-      });
+      // ignore if can't access
     }
   }
   
