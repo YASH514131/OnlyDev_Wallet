@@ -1,5 +1,5 @@
 /**
- * Background service worker for TestNet Wallet extension
+ * Background service worker for DevNet Wallet extension
  * Handles communication between content scripts and popup
  */
 
@@ -20,7 +20,7 @@ function keepAlive() {
 
 // Initialize on install
 chrome.runtime.onInstalled.addListener(() => {
-  // console.log('TestNet Wallet installed');
+  // console.log('DevNet Wallet installed');
   keepAlive();
 });
 
@@ -157,7 +157,7 @@ async function handleGetAccounts(sendResponse: (response: any) => void) {
 async function handleRequestAccounts(sender: chrome.runtime.MessageSender, sendResponse: (response: any) => void) {
   try {
     // Check both session storage and walletState
-    const SESSION_KEY = 'testnet_wallet_session';
+  const SESSION_KEY = 'devnet_wallet_session';
     const result = await chrome.storage.local.get([SESSION_KEY, 'walletState']);
     
     let evmAddress = null;
@@ -175,7 +175,7 @@ async function handleRequestAccounts(sender: chrome.runtime.MessageSender, sendR
       // console.error('❌ No wallet found or locked');
       sendResponse({ 
         success: false, 
-        error: 'Wallet is locked or not initialized. Please unlock your TestNet Wallet.' 
+  error: 'Wallet is locked or not initialized. Please unlock your DevNet Wallet.' 
       });
       return;
     }
@@ -240,7 +240,7 @@ async function handleApproveTransaction(tabId: number, transaction: any) {
     
     try {
       // Get wallet from session storage
-      const SESSION_KEY = 'testnet_wallet_session';
+  const SESSION_KEY = 'devnet_wallet_session';
       const result = await chrome.storage.local.get([SESSION_KEY]);
       const sessionData = result[SESSION_KEY];
       

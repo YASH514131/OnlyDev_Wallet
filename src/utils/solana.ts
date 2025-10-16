@@ -55,7 +55,7 @@ export async function getBalance(publicKey: string, rpcUrl: string): Promise<str
     // Block mainnet only if URL contains mainnet-beta
     if (rpcUrl.includes('mainnet-beta')) {
   // console.error('[Solana] Mainnet blocked!');
-      throw new Error('Mainnet not allowed - use devnet or testnet only');
+  throw new Error('Mainnet not allowed - use DevNet or test networks only');
     }
     
     const connection = new Connection(rpcUrl, 'confirmed');

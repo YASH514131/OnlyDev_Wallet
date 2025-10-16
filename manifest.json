@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "TestNet Wallet",
+  "name": "DevNet Wallet",
   "version": "1.0.0",
-  "description": "A secure, open-source browser wallet for testing smart contracts across multiple blockchains — never mainnet",
+  "description": "A secure DevNet-focused browser wallet for testing smart contracts across multiple blockchains — never mainnet",
   "permissions": [
     "storage",
     "activeTab",

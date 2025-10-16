@@ -1,5 +1,5 @@
 {
-  "name": "testnet-wallet",
+  "name": "devnet-wallet",
   "version": "1.0.0",
   "description": "A secure, open-source browser wallet for testing smart contracts across multiple blockchains — never mainnet",
   "main": "index.js",
@@ -10,7 +10,7 @@
   },
   "keywords": [
     "wallet",
-    "testnet",
+    "devnet",
     "ethereum",
     "solana",
     "blockchain",

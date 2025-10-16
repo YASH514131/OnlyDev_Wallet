@@ -33,7 +33,7 @@
     </style>
 </head>
 <body>
-    <h1>🧩 TestNet Wallet Injection Test</h1>
+    <h1>🧩 DevNet Wallet Injection Test</h1>
     
     <div class="box" id="status">
         <h3>Checking wallet injection...</h3>
@@ -64,18 +64,21 @@
             
             log('=== Wallet Detection ===');
             log('window.ethereum: ' + (window.ethereum ? 'EXISTS ✓' : 'NOT FOUND ✗'));
-            log('window.testnetWallet: ' + (window.testnetWallet ? 'EXISTS ✓' : 'NOT FOUND ✗'));
-            log('window.solanaTestnetWallet: ' + (window.solanaTestnetWallet ? 'EXISTS ✓' : 'NOT FOUND ✗'));
+            log('window.devnetWallet: ' + (window.devnetWallet ? 'EXISTS ✓' : 'NOT FOUND ✗'));
+            log('window.testnetWallet (legacy): ' + (window.testnetWallet ? 'EXISTS ✓' : 'NOT FOUND ✗'));
+            log('window.solanaDevnetWallet: ' + (window.solanaDevnetWallet ? 'EXISTS ✓' : 'NOT FOUND ✗'));
+            log('window.solanaTestnetWallet (legacy): ' + (window.solanaTestnetWallet ? 'EXISTS ✓' : 'NOT FOUND ✗'));
             
             if (window.ethereum) {
                 log('\n=== Ethereum Provider Properties ===');
-                log('isTestnetWallet: ' + window.ethereum.isTestnetWallet);
+                log('isDevnetWallet: ' + window.ethereum.isDevnetWallet);
+                log('isTestnetWallet (legacy flag): ' + window.ethereum.isTestnetWallet);
                 log('isMetaMask: ' + window.ethereum.isMetaMask);
                 log('isPhantom: ' + window.ethereum.isPhantom);
                 log('request method: ' + typeof window.ethereum.request);
                 
                 statusDiv.className = 'box success';
-                statusDiv.innerHTML = '<h3>✓ Wallet Detected!</h3><p>TestNet Wallet is properly injected.</p>';
+                statusDiv.innerHTML = '<h3>✓ Wallet Detected!</h3><p>DevNet Wallet is properly injected.</p>';
             } else {
                 statusDiv.className = 'box error';
                 statusDiv.innerHTML = '<h3>✗ Wallet NOT Detected</h3><p>window.ethereum is not available. Extension may not be loaded.</p>';

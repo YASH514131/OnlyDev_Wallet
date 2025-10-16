@@ -19,7 +19,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
   // console.log('handleExportKeys clicked', showKeys);
     if (!showKeys) {
       const confirmed = confirm(
-        '⚠️ WARNING: Only export testnet keys!\n\nNever share these keys or use them on mainnet.\n\nDo you want to continue?'
+  '⚠️ WARNING: Only export devnet keys!\n\nNever share these keys or use them on mainnet.\n\nDo you want to continue?'
       );
   // console.log('User confirmed:', confirmed);
       if (!confirmed) return;
@@ -65,7 +65,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
 
   const handleDownloadSolanaKeypair = () => {
     const confirmed = confirm(
-      '⚠️ TESTNET ONLY\n\nThis will download your Solana secret key as a JSON file. Keep it safe and never upload it to mainnet tools. Continue?'
+  '⚠️ DEVNET ONLY\n\nThis will download your Solana secret key as a JSON file. Keep it safe and never upload it to mainnet tools. Continue?'
     );
 
     if (!confirmed) return;
@@ -152,7 +152,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
         
         <div className="bg-red-900/30 border border-red-700/50 rounded-lg p-4 mb-4">
           <p className="text-red-300 text-sm">
-            ⚠️ <strong>TESTNET ONLY</strong> - Never export or use mainnet keys in this wallet!
+            ⚠️ <strong>DEVNET ONLY</strong> - Never export or use mainnet keys in this wallet!
           </p>
         </div>
 
@@ -300,8 +300,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ wallet, onClearWalle
 
       {/* About */}
       <div className="mt-8 text-center text-sm text-slate-500">
-        <p>TestNet Wallet v1.0.0</p>
-        <p className="mt-1">Developer tool for testnet only • MIT License</p>
+  <p>DevNet Wallet v1.0.0</p>
+  <p className="mt-1">Developer tool for devnet/test networks only • MIT License</p>
       </div>
     </div>
   );

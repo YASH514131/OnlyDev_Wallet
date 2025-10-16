@@ -137,7 +137,7 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
         <div className="text-center mb-8">
           <div className="text-6xl mb-4">🧩</div>
           <h2 className="text-2xl font-bold text-slate-100 mb-2">
-            TestNet Wallet
+            DevNet Wallet
           </h2>
           <p className="text-slate-400 text-sm">
             Developer wallet for blockchain testing
@@ -231,7 +231,7 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400 mt-1">✓</span>
-                  <span>Testnet only - safe for development</span>
+                  <span>DevNet only - safe for development</span>
                 </li>
               </ul>
             </div>
@@ -329,7 +329,7 @@ export const CreateWalletView: React.FC<CreateWalletViewProps> = ({
 
             <div className="bg-yellow-900/30 border border-yellow-700/50 rounded-xl p-4 mb-6">
               <p className="text-yellow-300 text-sm">
-                ⚠️ Only import testnet keys. Never use mainnet keys!
+                ⚠️ Only import DevNet keys. Never use mainnet keys!
               </p>
             </div>
 

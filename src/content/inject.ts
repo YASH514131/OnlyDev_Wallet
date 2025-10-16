@@ -1,9 +1,26 @@
 /**
  * Content script that injects wallet APIs into web pages
- * Provides window.testnetWallet (EVM) and window.solanaTestnetWallet (Solana)
+ * Provides window.devnetWallet (EVM) and window.solanaDevnetWallet (Solana)
  */
 
 let trustedToken: string | null = null;
+let devnetProvider: any = null;
+
+// Store a reference to DevNet provider after injection
+function captureDevnetProvider() {
+  devnetProvider = (window as any).ethereum;
+}
+
+// Guard against Phantom overwriting our provider
+function guardEthereum() {
+  if (!devnetProvider || devnetProvider !== (window as any).ethereum) {
+    // Phantom or another wallet overwrote window.ethereum; restore ours
+    if (devnetProvider && devnetProvider.isDevnetWallet) {
+      (window as any).ethereum = devnetProvider;
+      // console.log('🛡️ Restored DevNet Wallet after Phantom override');
+    }
+  }
+}
 
 // Inject ASAP to beat other wallets
 function injectScript() {
@@ -12,6 +29,8 @@ function injectScript() {
     script.src = chrome.runtime.getURL('inject.js');
     script.onload = function() {
       script.remove();
+      // Capture DevNet provider right after injection
+      setTimeout(captureDevnetProvider, 50);
     };
     
     // Inject at the very beginning
@@ -22,12 +41,27 @@ function injectScript() {
       target.appendChild(script);
     }
   } catch (_error) {
-  // console.error('Failed to inject TestNet Wallet:', _error);
+  // console.error('Failed to inject DevNet Wallet:', _error);
   }
+}
+
+// Monitor for Phantom or other wallets trying to override window.ethereum
+function monitorEthereumOverride() {
+  // Poll periodically to detect and restore our provider
+  const guardInterval = setInterval(() => {
+    guardEthereum();
+  }, 100);
+  
+  // Stop after 10 seconds (page fully loaded)
+  setTimeout(() => {
+    clearInterval(guardInterval);
+  }, 10000);
 }
 
 // Run immediately
 injectScript();
+// Start guarding after a delay to let injection complete
+setTimeout(monitorEthereumOverride, 100);
 
 // Listen for messages from the injected script
 window.addEventListener('message', async (event) => {
@@ -39,11 +73,11 @@ window.addEventListener('message', async (event) => {
     return;
   }
 
-  if (payload.type === 'TESTNET_WALLET_HANDSHAKE') {
+  if (payload.type === 'DEVNET_WALLET_HANDSHAKE') {
     if (typeof payload.token === 'string' && payload.token.length <= 256) {
       trustedToken = payload.token;
       window.postMessage({
-        type: 'TESTNET_WALLET_HANDSHAKE',
+        type: 'DEVNET_WALLET_HANDSHAKE',
         acknowledged: true,
         token: trustedToken,
       }, '*');
@@ -56,7 +90,7 @@ window.addEventListener('message', async (event) => {
   }
   
   // Ignore our own response messages to prevent infinite loop
-  if (payload.type && payload.type.startsWith('TESTNET_WALLET_') && !payload.type.endsWith('_RESPONSE')) {
+  if (payload.type && payload.type.startsWith('DEVNET_WALLET_') && !payload.type.endsWith('_RESPONSE')) {
   // console.log('📤 Content script received:', payload.type);
     
     try {
@@ -67,7 +101,7 @@ window.addEventListener('message', async (event) => {
       
       // Forward to background script
       const backgroundRequest = {
-        type: payload.type.replace('TESTNET_WALLET_', ''),
+        type: payload.type.replace('DEVNET_WALLET_', ''),
         data: payload.data,
       };
   // console.log('📤 Forwarding to background:', backgroundRequest);
@@ -116,7 +150,7 @@ chrome.runtime.onMessage.addListener((message) => {
         return;
       }
       window.postMessage({
-        type: 'TESTNET_WALLET_NETWORK_CHANGED',
+        type: 'DEVNET_WALLET_NETWORK_CHANGED',
         network: message.network,
         token: trustedToken,
       }, '*');

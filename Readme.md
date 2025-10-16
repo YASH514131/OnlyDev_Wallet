@@ -1,14 +1,14 @@
-# 🧩 TestNet-Only Developer Wallet Extension
+# 🧩 DevNet-Only Developer Wallet Extension
 
 A secure, open-source browser wallet for testing smart contracts across multiple blockchains — **never mainnet**.
 
-![TestNet Wallet](https://img.shields.io/badge/TestNet-Only-red?style=for-the-badge)
+![DevNet Wallet](https://img.shields.io/badge/DevNet-Only-0f995a?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)
 ![Version](https://img.shields.io/badge/version-1.0.0-green?style=for-the-badge)
 
 ## 🚀 Overview
 
-**TestNet Wallet** is a lightweight, privacy-preserving Chrome/Brave extension that lets blockchain developers test and debug dApps on testnets without risking real assets.
+**DevNet Wallet** is a lightweight, privacy-preserving Chrome/Brave extension that lets blockchain developers test and debug dApps on devnets and other test networks without risking real assets.
 
 ### ✨ Features
 
@@ -48,7 +48,7 @@ A secure, open-source browser wallet for testing smart contracts across multiple
 ### Project Structure
 
 ```
-testnet-wallet/
+devnet-wallet/
 ├── manifest.json           # Extension manifest (V3)
 ├── package.json            # Dependencies
 ├── vite.config.ts          # Build configuration
@@ -143,23 +143,23 @@ testnet-wallet/
 
 ### Injected APIs
 
-The extension injects `window.testnetWallet` (EVM) and `window.solanaTestnetWallet` (Solana) into web pages.
+The extension injects `window.devnetWallet` (EVM) and `window.solanaDevnetWallet` (Solana) into web pages. Legacy aliases (`window.testnetWallet`, `window.solanaTestnetWallet`) remain available for compatibility.
 
 #### EVM API (similar to `window.ethereum`)
 
 ```javascript
 // Request accounts
-const accounts = await window.testnetWallet.request({ 
+const accounts = await window.devnetWallet.request({ 
   method: 'eth_requestAccounts' 
 });
 
 // Get current chain
-const chainId = await window.testnetWallet.request({ 
+const chainId = await window.devnetWallet.request({ 
   method: 'eth_chainId' 
 });
 
 // Send transaction
-const txHash = await window.testnetWallet.request({
+const txHash = await window.devnetWallet.request({
   method: 'eth_sendTransaction',
   params: [{
     from: accounts[0],
@@ -170,7 +170,7 @@ const txHash = await window.testnetWallet.request({
 });
 
 // Listen for network changes
-window.testnetWallet.on('chainChanged', (chainId) => {
+window.devnetWallet.on('chainChanged', (chainId) => {
   console.log('Network changed to:', chainId);
 });
 ```
@@ -179,7 +179,7 @@ window.testnetWallet.on('chainChanged', (chainId) => {
 
 ```javascript
 // Connect wallet
-const { publicKey } = await window.solanaTestnetWallet.connect();
+const { publicKey } = await window.solanaDevnetWallet.connect();
 
 // Send transaction
 const connection = new solanaWeb3.Connection('https://api.devnet.solana.com');
@@ -191,7 +191,7 @@ const transaction = new solanaWeb3.Transaction().add(
   })
 );
 
-const { signature } = await window.solanaTestnetWallet.signAndSendTransaction(transaction);
+const { signature } = await window.solanaDevnetWallet.signAndSendTransaction(transaction);
 ```
 
 ---
@@ -220,8 +220,8 @@ const { signature } = await window.solanaTestnetWallet.signAndSendTransaction(tr
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourname/testnet-wallet
-cd testnet-wallet
+git clone https://github.com/yourname/devnet-wallet
+cd devnet-wallet
 
 # Install dependencies
 npm install

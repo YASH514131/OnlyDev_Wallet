@@ -279,14 +279,14 @@ const Popup: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-900">
-        <div className="text-slate-300">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen devnet-bg">
+        <div className="devnet-muted-text">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen devnet-bg">
       <Header 
         view={view} 
         onViewChange={setView}

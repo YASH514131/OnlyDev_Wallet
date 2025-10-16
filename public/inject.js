@@ -1,13 +1,13 @@
 /**
  * Injected script that provides wallet APIs to web pages
- * window.testnetWallet - EVM wallet (similar to window.ethereum)
- * window.solanaTestnetWallet - Solana wallet
+ * window.devnetWallet - EVM wallet (similar to window.ethereum)
+ * window.solanaDevnetWallet - Solana wallet
  */
 
 (function() {
   'use strict';
   
-  const HANDSHAKE_EVENT = 'TESTNET_WALLET_HANDSHAKE';
+  const HANDSHAKE_EVENT = 'DEVNET_WALLET_HANDSHAKE';
   let handshakeAcknowledged = false;
   const HANDSHAKE_TOKEN = (() => {
     try {
@@ -87,7 +87,7 @@
   
   // Immediately block Phantom from taking over ethereum
   if (window.ethereum && window.ethereum.isPhantom) {
-    console.log('🧩 Phantom detected, overriding with TestNet Wallet');
+  console.log('🧩 Phantom detected, overriding with DevNet Wallet');
     window.phantomEthereum = window.ethereum;
     delete window.ethereum;
   }
@@ -105,7 +105,7 @@
       }
       
       window.postMessage({
-        type: `TESTNET_WALLET_${type}`,
+        type: `DEVNET_WALLET_${type}`,
         id,
         data,
         token: HANDSHAKE_TOKEN,
@@ -157,8 +157,8 @@
     }
     
     // Handle network changes
-      if (message.type === 'TESTNET_WALLET_NETWORK_CHANGED') {
-      testnetWallet.emit('chainChanged', event.data.network);
+  if (message.type === 'DEVNET_WALLET_NETWORK_CHANGED') {
+  devnetWallet.emit('chainChanged', event.data.network);
     }
   });
   
@@ -230,7 +230,8 @@
   }
   
   // EVM Wallet API (similar to window.ethereum)
-  const testnetWallet = {
+  const devnetWallet = {
+    isDevnetWallet: true,
     isTestnetWallet: true,
     isMetaMask: true, // Pretend to be MetaMask so Remix detects us
     isPhantom: false, // Explicitly not Phantom
@@ -362,7 +363,8 @@
   };
   
   // Solana Wallet API
-  const solanaTestnetWallet = {
+  const solanaDevnetWallet = {
+    isDevnetWallet: true,
     isTestnetWallet: true,
     isPhantom: false, // Explicitly not Phantom
     
@@ -372,7 +374,7 @@
     },
     
     async disconnect() {
-      // No-op for testnet wallet
+  // No-op for DevNet wallet
     },
     
     async signTransaction(transaction) {
@@ -415,71 +417,204 @@
   };
   
   // Inject into window
+  Object.defineProperty(window, 'devnetWallet', {
+    value: devnetWallet,
+    writable: false,
+    configurable: false,
+  });
+  
+  Object.defineProperty(window, 'solanaDevnetWallet', {
+    value: solanaDevnetWallet,
+    writable: false,
+    configurable: false,
+  });
+
+  // Legacy aliases for backward compatibility
   Object.defineProperty(window, 'testnetWallet', {
-    value: testnetWallet,
+    value: devnetWallet,
     writable: false,
     configurable: false,
   });
   
   Object.defineProperty(window, 'solanaTestnetWallet', {
-    value: solanaTestnetWallet,
+    value: solanaDevnetWallet,
     writable: false,
     configurable: false,
   });
   
-  // Force inject as window.ethereum for Remix compatibility
+  // Force inject as window.ethereum for Remix compatibility while guarding against overrides
   // Store existing ethereum provider if present
   const existingProvider = window.ethereum;
-  
-  // Override window.ethereum completely
+  const observedProviders = new Set();
+
+  const ensureProviderRegistry = () => {
+    if (!Array.isArray(devnetWallet.providers)) {
+      devnetWallet.providers = [];
+    }
+    if (!devnetWallet.providers.includes(devnetWallet)) {
+      devnetWallet.providers.unshift(devnetWallet);
+    }
+  };
+
+  const registerExternalProvider = (provider) => {
+    if (!provider || provider === devnetWallet || observedProviders.has(provider)) {
+      return;
+    }
+    observedProviders.add(provider);
+    ensureProviderRegistry();
+    if (!devnetWallet.providers.includes(provider)) {
+      devnetWallet.providers.push(provider);
+    }
+    if (!window.phantomEthereum) {
+      window.phantomEthereum = provider;
+    }
+    console.log('🔁 Captured external ethereum provider', provider?.isPhantom ? '(Phantom)' : '');
+  };
+
+  const originalDefineProperty = Object.defineProperty;
+  const originalDefineProperties = Object.defineProperties;
+  const originalReflectDefineProperty = Reflect.defineProperty;
+
+  const applyDevnetDescriptor = () => {
+    try {
+      originalDefineProperty(window, 'ethereum', {
+        configurable: false,
+        enumerable: true,
+        get() {
+          return devnetWallet;
+        },
+        set(provider) {
+          registerExternalProvider(provider);
+        },
+      });
+    } catch (error) {
+      console.warn('⚠️ Failed to lock ethereum descriptor', error);
+    }
+  };
+
   try {
     delete window.ethereum;
-  } catch (e) {
-    // If can't delete, try to override
+  } catch (_error) {
+    // ignore if already non-configurable
   }
-  
-  Object.defineProperty(window, 'ethereum', {
-    value: testnetWallet,
-    writable: true,
-    configurable: true,
-  });
-  
-  // Also hide Phantom's specific properties
+
+  applyDevnetDescriptor();
+
+  Object.defineProperty = function(target, property, descriptor) {
+    if (target === window && property === 'ethereum') {
+      if (descriptor) {
+        if ('value' in descriptor && descriptor.value) {
+          registerExternalProvider(descriptor.value);
+        }
+        if (descriptor.get) {
+          try {
+            registerExternalProvider(descriptor.get());
+          } catch (_error) {
+            // getter may require context; ignore
+          }
+        }
+      }
+      applyDevnetDescriptor();
+      return target;
+    }
+    return originalDefineProperty(target, property, descriptor);
+  };
+
+  Object.defineProperties = function(target, descriptors) {
+    if (target === window && descriptors && descriptors.ethereum) {
+      const desc = descriptors.ethereum;
+      if (desc) {
+        if ('value' in desc && desc.value) {
+          registerExternalProvider(desc.value);
+        }
+        if (desc.get) {
+          try {
+            registerExternalProvider(desc.get());
+          } catch (_error) {
+            // ignore getter side effects
+          }
+        }
+      }
+      applyDevnetDescriptor();
+      const { ethereum, ...rest } = descriptors;
+      return originalDefineProperties(target, rest);
+    }
+    return originalDefineProperties(target, descriptors);
+  };
+
+  Reflect.defineProperty = function(target, property, descriptor) {
+    if (target === window && property === 'ethereum') {
+      if (descriptor) {
+        if ('value' in descriptor && descriptor.value) {
+          registerExternalProvider(descriptor.value);
+        }
+        if (descriptor.get) {
+          try {
+            registerExternalProvider(descriptor.get());
+          } catch (_error) {
+            // ignore getter evaluation issues
+          }
+        }
+      }
+      applyDevnetDescriptor();
+      return true;
+    }
+    return originalReflectDefineProperty(target, property, descriptor);
+  };
+
+  // Seed registry with previously existing provider (e.g., Phantom)
+  if (existingProvider) {
+    registerExternalProvider(existingProvider);
+  }
+
+  ensureProviderRegistry();
+
+  // Also hide Phantom's specific properties to avoid double injection UIs
   if (window.phantom) {
     window.phantomBackup = window.phantom;
-    delete window.phantom;
+    try {
+      delete window.phantom;
+    } catch (_error) {
+      // Some providers expose non-configurable properties; keep reference instead
+      Object.defineProperty(window, 'phantom', {
+        configurable: false,
+        enumerable: false,
+        get() {
+          return undefined;
+        },
+        set(provider) {
+          registerExternalProvider(provider);
+        },
+      });
+    }
   }
   
-  // Store backup reference
-  if (existingProvider) {
-    window.phantomEthereum = existingProvider;
-    console.log('⚠️ Phantom wallet moved to window.phantomEthereum');
-  }
-  
-  console.log('🧩 TestNet Wallet injected as window.ethereum (Remix compatible)');
-  console.log('Provider flags:', {
-    isTestnetWallet: window.ethereum.isTestnetWallet,
-    isPhantom: window.ethereum.isPhantom,
-    isMetaMask: window.ethereum.isMetaMask
-  });
-  console.log('🔍 Test the wallet: Type "window.ethereum.request({ method: \'eth_requestAccounts\' })" in console');
+  // console.log('🧩 DevNet Wallet injected as window.ethereum (Remix compatible)');
+  // console.log('Provider flags:', {
+  //   isDevnetWallet: window.ethereum.isDevnetWallet,
+  //   isTestnetWallet: window.ethereum.isTestnetWallet,
+  //   isPhantom: window.ethereum.isPhantom,
+  //   isMetaMask: window.ethereum.isMetaMask
+  // });
+  // console.log('🔍 Test the wallet: Type "window.ethereum.request({ method: \'eth_requestAccounts\' })" in console');
   
   // Announce to the page that the wallet is ready
+  window.dispatchEvent(new Event('devnetWallet#initialized'));
   window.dispatchEvent(new Event('testnetWallet#initialized'));
   window.dispatchEvent(new Event('ethereum#initialized'));
   
   // EIP-6963: Announce provider (new standard for Remix)
   const announceProvider = () => {
     const info = {
-      uuid: crypto.randomUUID ? crypto.randomUUID() : 'testnet-wallet-' + Date.now(),
-      name: 'TestNet Developer Wallet',
-      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%234F46E5"/><text x="50" y="70" font-size="60" text-anchor="middle" fill="white">T</text></svg>',
-      rdns: 'io.github.testnet-wallet',
+      uuid: crypto.randomUUID ? crypto.randomUUID() : 'devnet-wallet-' + Date.now(),
+      name: 'DevNet Developer Wallet',
+      icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%230d5132"/><stop offset="100%" stop-color="%233ae59e"/></linearGradient></defs><rect width="100" height="100" rx="20" fill="url(%23g)"/><text x="50" y="68" font-size="52" font-family="Arial" font-weight="700" text-anchor="middle" fill="white">D</text></svg>',
+      rdns: 'io.github.devnet-wallet',
     };
 
     window.dispatchEvent(
       new CustomEvent('eip6963:announceProvider', {
-        detail: Object.freeze({ info, provider: testnetWallet }),
+        detail: Object.freeze({ info, provider: devnetWallet }),
       })
     );
   };
@@ -492,6 +627,6 @@
     announceProvider();
   });
   
-  console.log('🧩 TestNet Wallet APIs injected');
-  console.log('📢 EIP-6963 provider announced');
+  // console.log('🧩 DevNet Wallet APIs injected');
+  // console.log('📢 EIP-6963 provider announced');
 })();
